@@ -12,62 +12,55 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  profileLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
   loading: true,
-  profileLoading: true,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     if (!isFirebaseConfigured() || !auth) {
         setLoading(false);
-        setProfileLoading(false);
         return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setLoading(false);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (!user) {
-        // If no user, no profile to load.
-        setProfileLoading(false);
+        // If there's no user, we're done loading.
+        setLoading(false);
         setUserProfile(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
     if (user && db) {
-      setProfileLoading(true); // Start loading profile
-      const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      setLoading(true); // Start loading profile
+      const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         } else {
-          // This case might happen briefly after signup before profile is created
           setUserProfile(null);
         }
-        setProfileLoading(false); // Done loading profile
+        setLoading(false); // Finished loading profile
       });
-      return () => unsub();
+      return () => unsubProfile();
     } else {
-      // If there's no user, we're not loading a profile.
-      setProfileLoading(false);
+       // If there's no user, we set loading to false in the other useEffect.
     }
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, profileLoading }}>
+    <AuthContext.Provider value={{ user, userProfile, loading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -78,16 +71,16 @@ export const useAuth = () => {
 };
 
 export const useRequireAuth = () => {
-  const { user, loading, profileLoading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // We want to wait for both auth state and profile to be loaded.
-    if (!loading && !profileLoading && !user) {
+    // Wait until loading is complete before checking for a user.
+    if (!loading && !user) {
       router.push('/login');
     }
-  }, [user, loading, profileLoading, router]);
+  }, [user, loading, router]);
 
-  // Return a combined loading state. The user is considered "loading" until both checks are complete.
-  return { user, loading: loading || profileLoading };
+  // The user is considered "loading" until the auth state is resolved and the profile is fetched.
+  return { user, loading };
 };
