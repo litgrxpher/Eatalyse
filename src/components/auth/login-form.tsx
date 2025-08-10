@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -15,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
-  username: z.string().min(3, { message: 'Username must be at least 3 characters.' }),
+  username: z.string().min(1, { message: 'Username is required.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
 
@@ -36,15 +37,17 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const email = `${values.username}@macromate.com`;
+      const email = `${values.username.toLowerCase()}@macromate.com`;
       await signInWithEmailAndPassword(auth, email, values.password);
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'Invalid username or password.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (error.code === 'auth/invalid-api-key') {
+        errorMessage = 'Firebase API key is not configured. Please check your environment variables.'
+      } else {
+        errorMessage = 'An error occurred during login. Please try again.';
       }
       toast({
         variant: 'destructive',

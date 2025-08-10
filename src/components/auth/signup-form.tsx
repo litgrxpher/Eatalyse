@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -37,7 +38,8 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const email = `${values.username}@macromate.com`;
+      // Firebase requires an email for authentication, so we create a "dummy" one.
+      const email = `${values.username.toLowerCase()}@macromate.com`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, values.password);
       
       // We need to update the user's profile to store the username, as Firebase Auth primarily uses email.
@@ -45,14 +47,17 @@ export function SignupForm() {
         await updateProfile(userCredential.user, { displayName: values.username });
       }
 
+      // We still pass the generated email to our Firestore user profile.
       await createUserProfile(userCredential.user.uid, email, values.username);
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This username is already taken. Please choose another one.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (error.code === 'auth/invalid-api-key') {
+        errorMessage = 'Firebase API key is not configured. Please check your environment variables.'
+      } else {
+        errorMessage = 'An error occurred during sign up. Please try again.';
       }
       toast({
         variant: 'destructive',
