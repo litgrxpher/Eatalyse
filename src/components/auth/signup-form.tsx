@@ -62,7 +62,10 @@ export function SignupForm() {
         errorMessage = 'This username is already taken. Please choose another one.';
       } else if (error.code === 'auth/invalid-api-key') {
         errorMessage = 'Firebase API key is not configured. Please check your .env.local file.'
-      } else {
+      } else if (error.code === 'auth/configuration-not-found') {
+        errorMessage = 'Authentication not configured. Please enable Email/Password and Google sign-in providers in the Firebase Console.';
+      }
+      else {
         errorMessage = `An error occurred during sign up: ${error.message}`;
       }
       toast({
@@ -84,10 +87,16 @@ export function SignupForm() {
       await createUserProfile(result.user, result.user.displayName, result.user.email, result.user.photoURL);
       router.push('/dashboard');
     } catch (error: any) {
+       let errorMessage = "An unexpected error occurred.";
+        if (error.code === 'auth/configuration-not-found') {
+            errorMessage = 'Authentication not configured. Please enable Google sign-in provider in the Firebase Console.';
+        } else {
+            errorMessage = error.message;
+        }
        toast({
         variant: 'destructive',
         title: 'Google Sign-In Failed',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setIsGoogleLoading(false);
