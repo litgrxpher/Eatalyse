@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Terminal } from 'lucide-react';
 
 const formSchema = z.object({
   username: z.string().min(1, { message: 'Username is required.' }),
@@ -34,8 +36,21 @@ export function LoginForm() {
     },
   });
 
+  if (!isFirebaseConfigured()) {
+    return (
+        <Alert>
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Firebase Not Configured</AlertTitle>
+            <AlertDescription>
+                Please add your Firebase credentials to the <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file to enable authentication.
+            </AlertDescription>
+        </Alert>
+    )
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    if (!auth) return;
     try {
       const email = `${values.username.toLowerCase()}@macromate.com`;
       await signInWithEmailAndPassword(auth, email, values.password);
@@ -45,7 +60,7 @@ export function LoginForm() {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'Invalid username or password.';
       } else if (error.code === 'auth/invalid-api-key') {
-        errorMessage = 'Firebase API key is not configured. Please check your .env file.'
+        errorMessage = 'Firebase API key is not configured. Please check your .env.local file.'
       } else {
         errorMessage = 'An error occurred during login. Please try again.';
       }
@@ -61,6 +76,7 @@ export function LoginForm() {
 
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);

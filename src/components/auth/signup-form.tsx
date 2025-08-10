@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { createUserProfile } from '@/lib/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Terminal } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters.' }).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
@@ -35,8 +36,21 @@ export function SignupForm() {
     },
   });
 
+  if (!isFirebaseConfigured()) {
+    return (
+        <Alert>
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Firebase Not Configured</AlertTitle>
+            <AlertDescription>
+                Please add your Firebase credentials to the <code className="font-mono text-xs bg-muted p-1 rounded-sm">.env.local</code> file to enable authentication.
+            </AlertDescription>
+        </Alert>
+    )
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    if (!auth) return;
     try {
       // Firebase requires an email for authentication, so we create a "dummy" one.
       const email = `${values.username.toLowerCase()}@macromate.com`;
@@ -55,7 +69,7 @@ export function SignupForm() {
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This username is already taken. Please choose another one.';
       } else if (error.code === 'auth/invalid-api-key') {
-        errorMessage = 'Firebase API key is not configured. Please check your .env file.'
+        errorMessage = 'Firebase API key is not configured. Please check your .env.local file.'
       } else {
         errorMessage = 'An error occurred during sign up. Please try again.';
       }
@@ -71,6 +85,7 @@ export function SignupForm() {
   
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
