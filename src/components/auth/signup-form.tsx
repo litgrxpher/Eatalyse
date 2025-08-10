@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { createUserProfile } from '@/lib/firestore';
 import { useRouter } from 'next/navigation';
@@ -52,17 +52,9 @@ export function SignupForm() {
     setIsLoading(true);
     if (!auth) return;
     try {
-      // Firebase requires an email for authentication, so we create a "dummy" one.
       const email = `${values.username.toLowerCase()}@macromate.com`;
       const userCredential = await createUserWithEmailAndPassword(auth, email, values.password);
-      
-      // We need to update the user's profile to store the username, as Firebase Auth primarily uses email.
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, { displayName: values.username });
-      }
-
-      // We still pass the generated email to our Firestore user profile.
-      await createUserProfile(userCredential.user.uid, email, values.username);
+      await createUserProfile(userCredential.user, values.username, email);
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = "An unexpected error occurred.";
@@ -71,7 +63,7 @@ export function SignupForm() {
       } else if (error.code === 'auth/invalid-api-key') {
         errorMessage = 'Firebase API key is not configured. Please check your .env.local file.'
       } else {
-        errorMessage = 'An error occurred during sign up. Please try again.';
+        errorMessage = `An error occurred during sign up: ${error.message}`;
       }
       toast({
         variant: 'destructive',
@@ -89,10 +81,7 @@ export function SignupForm() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // When signing in with Google, we use the provided display name and email.
-      // We fall back to a generated username if the display name is not available.
-      const displayName = result.user.displayName || `user_${result.user.uid.substring(0, 5)}`;
-      await createUserProfile(result.user.uid, result.user.email, displayName);
+      await createUserProfile(result.user, result.user.displayName, result.user.email, result.user.photoURL);
       router.push('/dashboard');
     } catch (error: any) {
        toast({

@@ -12,30 +12,45 @@ import {
   orderBy,
   Timestamp,
   updateDoc,
+  getDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
+import type { User } from 'firebase/auth';
+import { updateProfile } from 'firebase/auth';
 
 export const createUserProfile = async (
-  uid: string,
+  user: User,
+  displayName: string | null,
   email: string | null,
-  displayName: string | null
+  photoURL: string | null = null,
 ) => {
-  const userDocRef = doc(db, 'users', uid);
-  const defaultGoals: Goals = {
-    calories: 2000,
-    protein: 150,
-    carbs: 200,
-    fat: 60,
-    fiber: 30,
-  };
-  await setDoc(userDocRef, {
-    uid,
-    email,
-    displayName,
-    goals: defaultGoals,
-    createdAt: serverTimestamp(),
-  });
+  const userDocRef = doc(db, 'users', user.uid);
+  const userDoc = await getDoc(userDocRef);
+
+  // If the user's profile displayName is different from what's in the auth object, update it.
+  if (user.displayName !== displayName) {
+    await updateProfile(user, { displayName });
+  }
+
+  // If the user document doesn't exist, create it.
+  if (!userDoc.exists()) {
+    const defaultGoals: Goals = {
+      calories: 2000,
+      protein: 150,
+      carbs: 200,
+      fat: 60,
+      fiber: 30,
+    };
+    await setDoc(userDocRef, {
+      uid: user.uid,
+      email,
+      displayName,
+      photoURL: photoURL || user.photoURL,
+      goals: defaultGoals,
+      createdAt: serverTimestamp(),
+    });
+  }
 };
 
 export const addMeal = async (mealData: Omit<Meal, 'id' | 'createdAt'>, imageFile?: File) => {
