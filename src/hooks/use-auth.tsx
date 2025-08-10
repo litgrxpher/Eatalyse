@@ -60,6 +60,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setProfileLoading(false); // Done loading profile
       });
       return () => unsub();
+    } else {
+      // If there's no user, we're not loading a profile.
+      setProfileLoading(false);
     }
   }, [user]);
 
@@ -85,6 +88,6 @@ export const useRequireAuth = () => {
     }
   }, [user, loading, profileLoading, router]);
 
-  // Return a combined loading state.
+  // Return a combined loading state. The user is considered "loading" until both checks are complete.
   return { user, loading: loading || profileLoading };
 };
