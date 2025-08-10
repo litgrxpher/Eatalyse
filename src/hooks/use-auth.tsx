@@ -27,36 +27,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!isFirebaseConfigured() || !auth) {
-        setLoading(false);
-        return;
+      setLoading(false);
+      return;
     }
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (!user) {
-        // If there's no user, we're done loading.
-        setLoading(false);
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) {
+        // If there's no user, we can immediately stop loading.
         setUserProfile(null);
+        setLoading(false);
       }
+      // If there IS a user, the second useEffect will handle setting loading to false.
     });
 
     return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
-    if (user && db) {
-      setLoading(true); // Start loading profile
+    if (user) {
+      // User is authenticated, now we fetch their profile.
+      // We are still in a "loading" state until the profile is fetched.
       const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         } else {
           setUserProfile(null);
         }
-        setLoading(false); // Finished loading profile
+        // Once the profile is fetched (or we know it doesn't exist), we are done loading.
+        setLoading(false);
       });
       return () => unsubProfile();
-    } else {
-       // If there's no user, we set loading to false in the other useEffect.
     }
+    // If there is no user, the first useEffect handles setting loading to false.
   }, [user]);
 
   return (
