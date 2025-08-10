@@ -89,7 +89,10 @@ export function SignupForm() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      await createUserProfile(result.user.uid, result.user.email, result.user.displayName);
+      // When signing in with Google, we use the provided display name and email.
+      // We fall back to a generated username if the display name is not available.
+      const displayName = result.user.displayName || `user_${result.user.uid.substring(0, 5)}`;
+      await createUserProfile(result.user.uid, result.user.email, displayName);
       router.push('/dashboard');
     } catch (error: any) {
        toast({
