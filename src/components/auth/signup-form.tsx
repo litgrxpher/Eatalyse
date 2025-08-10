@@ -55,7 +55,7 @@ export function SignupForm() {
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This username is already taken. Please choose another one.';
       } else if (error.code === 'auth/invalid-api-key') {
-        errorMessage = 'Firebase API key is not configured. Please check your environment variables.'
+        errorMessage = 'Firebase API key is not configured. Please check your .env file.'
       } else {
         errorMessage = 'An error occurred during sign up. Please try again.';
       }

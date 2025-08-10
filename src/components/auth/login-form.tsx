@@ -45,7 +45,7 @@ export function LoginForm() {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'Invalid username or password.';
       } else if (error.code === 'auth/invalid-api-key') {
-        errorMessage = 'Firebase API key is not configured. Please check your environment variables.'
+        errorMessage = 'Firebase API key is not configured. Please check your .env file.'
       } else {
         errorMessage = 'An error occurred during login. Please try again.';
       }
