@@ -33,30 +33,35 @@ export function UserNav() {
     if (names.length > 1) {
       return names[0][0] + names[names.length - 1][0];
     }
-    return names[0].substring(0, 2);
+    return name.substring(0, 2).toUpperCase();
   }
 
   if (!user) {
     return null;
   }
 
+  const displayName = userProfile?.displayName || user.displayName;
+  const userEmail = user.email?.endsWith('@macromate.com') ? '' : user.email;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={userProfile?.photoURL || user.photoURL || undefined} alt="@shadcn" />
-            <AvatarFallback>{getInitials(userProfile?.displayName || user.displayName)}</AvatarFallback>
+            <AvatarImage src={userProfile?.photoURL || user.photoURL || undefined} alt="User Avatar" />
+            <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'User'}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
-            </p>
+            <p className="text-sm font-medium leading-none">{displayName || 'User'}</p>
+            {userEmail && 
+              <p className="text-xs leading-none text-muted-foreground">
+                {userEmail}
+              </p>
+            }
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
