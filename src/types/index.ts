@@ -25,11 +25,14 @@ export interface FoodItem {
   servingSize: string;
 }
 
+export type MealCategory = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks';
+
 export interface Meal {
   id: string;
   userId: string;
   date: string; // YYYY-MM-DD
   name: string;
+  category: MealCategory;
   foodItems: FoodItem[];
   totals: Omit<Goals, ''>;
   photoUrl?: string;

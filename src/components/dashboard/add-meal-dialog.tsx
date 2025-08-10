@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { identifyFoodFromImage } from '@/ai/flows/identify-food-from-image';
 import { lookupMacroInformation } from '@/ai/flows/lookup-macro-information';
 import { addMeal } from '@/lib/firestore';
-import type { FoodItem, LookupMacroInformationOutput } from '@/types';
+import type { FoodItem, LookupMacroInformationOutput, MealCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, Loader2, X, Plus } from 'lucide-react';
 
@@ -25,6 +25,7 @@ interface AddMealDialogProps {
   setIsOpen: (isOpen: boolean) => void;
   onMealAdded: () => void;
   date: string;
+  category: MealCategory;
 }
 
 type IdentifiedFood = {
@@ -33,7 +34,7 @@ type IdentifiedFood = {
   status: 'loading' | 'loaded' | 'error';
 };
 
-export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealDialogProps) {
+export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }: AddMealDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -43,6 +44,12 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (category) {
+      setMealName(category);
+    }
+  }, [category]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -63,7 +70,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
     setIdentifiedFoods([]);
     try {
       const { foodItems } = await identifyFoodFromImage({ photoDataUri: dataUri });
-      setMealName(foodItems.join(', '));
+      setMealName(foodItems.length > 0 ? foodItems.join(', ') : category);
       const initialFoods = foodItems.map(name => ({ name, status: 'loading' } as IdentifiedFood));
       setIdentifiedFoods(initialFoods);
 
@@ -104,6 +111,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   const handleClose = () => {
     resetState();
     setIsOpen(false);
+    onMealAdded();
   };
 
   const handleSaveMeal = async () => {
@@ -131,14 +139,14 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
         await addMeal({
             userId: user.uid,
             date,
-            name: mealName || 'My Meal',
+            name: mealName || category,
+            category,
             foodItems,
             totals,
             photoUrl: imagePreview || ''
         }, imageFile || undefined);
         
         toast({ title: 'Meal saved!', description: 'Your meal has been added to your log.' });
-        onMealAdded();
         handleClose();
     } catch(error) {
         toast({ variant: 'destructive', title: 'Error saving meal', description: 'Something went wrong.'});
@@ -163,7 +171,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
     <Dialog open={isOpen} onOpenChange={(open) => !open ? handleClose() : setIsOpen(true)}>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle>Add a New Meal</DialogTitle>
+          <DialogTitle>Add Meal to {category}</DialogTitle>
           <DialogDescription>
             Upload a photo of your meal to have AI identify it, or add items manually.
           </DialogDescription>
