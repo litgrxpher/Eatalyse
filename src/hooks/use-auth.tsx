@@ -27,23 +27,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!isFirebaseConfigured() || !auth) {
-      console.log("Firebase not configured, setting loading to false.");
       setLoading(false);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-
       if (currentUser) {
-        // User is logged in, fetch profile
         const profileUnsubscribe = onSnapshot(doc(db, 'users', currentUser.uid), (doc) => {
-          if (doc.exists()) {
-            setUserProfile(doc.data() as UserProfile);
-          } else {
-            setUserProfile(null);
-          }
-          setLoading(false); // Done loading after profile fetch
+          setUserProfile(doc.exists() ? doc.data() as UserProfile : null);
+          setLoading(false);
         }, (error) => {
           console.error("Error fetching user profile:", error);
           setUserProfile(null);
@@ -51,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         return () => profileUnsubscribe();
       } else {
-        // No user, stop loading
         setUserProfile(null);
         setLoading(false);
       }
@@ -76,12 +68,10 @@ export const useRequireAuth = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until loading is complete before checking for a user.
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
-  // The user is considered "loading" until the auth state is resolved.
-  return { user, loading };
+  return { loading };
 };
