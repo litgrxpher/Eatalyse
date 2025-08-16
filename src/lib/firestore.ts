@@ -148,6 +148,11 @@ export async function deleteMeal(mealId: string, userId: string): Promise<void> 
     
     const mealData = mealDoc.data() as Meal;
       
+    // Delete the meal document first
+    await deleteDoc(mealDocRef);
+    console.log('Meal document deleted from Firestore successfully.');
+      
+    // Then, delete the photo from storage if it exists
     if (mealData.photoUrl) {
       try {
         const photoRef = ref(storage, mealData.photoUrl);
@@ -160,9 +165,6 @@ export async function deleteMeal(mealId: string, userId: string): Promise<void> 
         }
       }
     }
-      
-    await deleteDoc(mealDocRef);
-    console.log('Meal document deleted from Firestore successfully.');
 
   } catch (error) {
     console.error('Error deleting meal:', error);
