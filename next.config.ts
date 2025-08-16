@@ -25,40 +25,6 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Find the rule for image assets
-    const imageRule = config.module.rules.find(
-      (rule) =>
-        typeof rule === 'object' &&
-        rule !== null &&
-        'test' in rule &&
-        rule.test instanceof RegExp &&
-        rule.test.test('.svg') &&
-        !rule.oneOf
-    );
-
-    if (imageRule && typeof imageRule === 'object' && imageRule !== null) {
-      // Exclude .ico files from this rule
-      imageRule.exclude = /\.ico$/;
-    }
-
-    // Add a new rule for .ico files to be handled as static assets
-    config.module.rules.push({
-      test: /\.ico$/,
-      use: [
-        {
-          loader: 'file-loader',
-          options: {
-            name: '[name].[ext]',
-            publicPath: '/',
-            outputPath: '/',
-          },
-        },
-      ],
-    });
-
-    return config;
-  },
 };
 
 export default nextConfig;
