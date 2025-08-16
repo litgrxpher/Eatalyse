@@ -63,27 +63,18 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   }
 }
 
-export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt' | 'photoUrl'>, imageFile?: File): Promise<string> {
+export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>): Promise<string> {
   try {
-    const storage = getStorageInstance();
     const db = getFirestoreInstance();
-    
     const docId = uuidv4();
     
-    const mealToSave: Partial<Meal> = {
+    const mealToSave: Meal = {
       ...mealData,
       id: docId,
       createdAt: Date.now(),
     };
     
-    if (imageFile) {
-      const storageRef = ref(storage, `meals/${mealData.userId}/${docId}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
-      mealToSave.photoUrl = await getDownloadURL(snapshot.ref);
-    }
-    
     await setDoc(doc(db, 'meals', docId), mealToSave);
-    
     return docId;
   } catch (error) {
     console.error('❌ Firestore - Error adding meal:', error);
@@ -139,31 +130,14 @@ export async function getMealsForDay(userId: string, date: Date): Promise<Meal[]
 export async function deleteMeal(mealId: string, userId: string): Promise<void> {
   try {
     const db = getFirestoreInstance();
-    const storage = getStorageInstance();
-    
     const mealDocRef = doc(db, 'meals', mealId);
     const mealDoc = await getDoc(mealDocRef);
 
     if (!mealDoc.exists() || mealDoc.data().userId !== userId) {
         throw new Error("Meal not found or permission denied.");
     }
-    
-    const mealData = mealDoc.data() as Meal;
-      
-    if (mealData.photoUrl) {
-      try {
-        const photoRef = ref(storage, mealData.photoUrl);
-        await deleteObject(photoRef);
-        console.log('Photo deleted from storage successfully.');
-      } catch (storageError: any) {
-        if (storageError.code !== 'storage/object-not-found') {
-          console.warn('Could not delete photo from storage, but proceeding to delete Firestore document:', storageError);
-        }
-      }
-    }
 
     await deleteDoc(mealDocRef);
-    console.log('Meal document deleted from Firestore successfully.');
 
   } catch (error) {
     console.error('Error deleting meal:', error);
@@ -194,7 +168,7 @@ export const getWeeklyTrends = async (userId: string) => {
       collection(db, 'meals'),
       where('userId', '==', userId),
       where('createdAt', '>=', weekAgo.getTime()),
-      orderBy('userId', 'asc')
+      orderBy('createdAt', 'desc')
     );
 
     const querySnapshot = await getDocs(q);
