@@ -74,22 +74,18 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFil
       const storageRef = ref(storage, `meals/${mealData.userId}/${uuidv4()}`);
       const snapshot = await uploadBytes(storageRef, imageFile);
       photoUrl = await getDownloadURL(snapshot.ref);
-    } 
+    }
     
     const docId = uuidv4();
-    const mealWithId: Meal = {
+    
+    const mealToSave: Meal = {
       ...mealData,
       id: docId,
       createdAt: Date.now(),
-      photoUrl,
+      ...(photoUrl && { photoUrl }), // Conditionally add photoUrl
     };
-
-    const dataToSave: Partial<Meal> = { ...mealWithId };
-    if (dataToSave.photoUrl === undefined) {
-      delete dataToSave.photoUrl;
-    }
     
-    await setDoc(doc(db, 'meals', docId), dataToSave);
+    await setDoc(doc(db, 'meals', docId), mealToSave);
     
     return docId;
   } catch (error) {
@@ -98,19 +94,25 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFil
   }
 }
 
+
 export async function updateMeal(mealId: string, updates: Partial<Meal>): Promise<void> {
   try {
     const db = getFirestoreInstance();
     const mealDocRef = doc(db, 'meals', mealId);
-    await updateDoc(mealDocRef, {
+    
+    // Ensure the ID is part of the update to maintain data integrity
+    const dataToUpdate = {
       ...updates,
-      id: mealId
-    });
+      id: mealId,
+    };
+
+    await updateDoc(mealDocRef, dataToUpdate);
   } catch (error) {
     console.error('Error updating meal:', error);
     throw error;
   }
 }
+
 
 export async function getMealsForDay(userId: string, date: Date): Promise<Meal[]> {
   try {
