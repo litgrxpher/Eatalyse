@@ -226,7 +226,7 @@ export async function addWeightEntry(userId: string, weight: number): Promise<vo
   try {
     const db = getFirestoreInstance();
     const date = new Date().toISOString().split('T')[0];
-    const weightEntry: WeightEntry = { date, weight };
+    const weightEntry: WeightEntry = { userId, date, weight };
 
     const weightHistoryRef = collection(db, 'users', userId, 'weightHistory');
     await addDoc(weightHistoryRef, weightEntry);

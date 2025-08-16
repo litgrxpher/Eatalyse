@@ -50,6 +50,7 @@ export interface LookupMacroInformationOutput {
 }
 
 export interface WeightEntry {
+  userId: string;
   date: string; // YYYY-MM-DD
   weight: number;
 }
