@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'MacroMate – Free AI Calorie & Macro Tracker',
   description: 'Track your calories and macros effortlessly with AI-powered food identification.',
+  icons: [],
 };
 
 export default function RootLayout({
