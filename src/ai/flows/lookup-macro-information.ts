@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,15 +14,16 @@ import {z} from 'genkit';
 
 const LookupMacroInformationInputSchema = z.object({
   foodItem: z.string().describe('The name of the food item to lookup.'),
+  servingSize: z.string().describe('The serving size of the food item.'),
 });
 export type LookupMacroInformationInput = z.infer<typeof LookupMacroInformationInputSchema>;
 
 const LookupMacroInformationOutputSchema = z.object({
-  calories: z.number().describe('The number of calories in the food item.'),
-  protein: z.number().describe('The amount of protein in grams.'),
-  carbs: z.number().describe('The amount of carbohydrates in grams.'),
-  fat: z.number().describe('The amount of fat in grams.'),
-  fiber: z.number().describe('The amount of fiber in grams.'),
+  calories: z.number().describe('The number of calories in the food item for the given serving size.'),
+  protein: z.number().describe('The amount of protein in grams for the given serving size.'),
+  carbs: z.number().describe('The amount of carbohydrates in grams for the given serving size.'),
+  fat: z.number().describe('The amount of fat in grams for the given serving size.'),
+  fiber: z.number().describe('The amount of fiber in grams for the given serving size.'),
 });
 export type LookupMacroInformationOutput = z.infer<typeof LookupMacroInformationOutputSchema>;
 
@@ -35,9 +37,10 @@ const prompt = ai.definePrompt({
   name: 'lookupMacroInformationPrompt',
   input: {schema: LookupMacroInformationInputSchema},
   output: {schema: LookupMacroInformationOutputSchema},
-  prompt: `You are a nutritional expert. Given a food item, you will look up its nutritional information, including calories, protein, carbs, fat, and fiber.  Return the information in JSON format.
+  prompt: `You are a nutritional expert. Given a food item and its serving size, you will look up its nutritional information, including calories, protein, carbs, fat, and fiber.  Return the information in JSON format.
 
-Food Item: {{{foodItem}}}`,
+Food Item: {{{foodItem}}}
+Serving Size: {{{servingSize}}}`,
 });
 
 const lookupMacroInformationFlow = ai.defineFlow(

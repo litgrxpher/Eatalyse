@@ -21,7 +21,7 @@ import { lookupMacroInformation } from '@/ai/flows/lookup-macro-information';
 import { addMeal } from '@/lib/firestore';
 import type { FoodItem, LookupMacroInformationOutput } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, Loader2, X, Plus, Calculator, Image as ImageIcon } from 'lucide-react';
+import { Camera, Upload, Loader2, X, Plus, Calculator, Image as ImageIcon, Search } from 'lucide-react';
 
 interface AddMealDialogProps {
   isOpen: boolean;
@@ -59,12 +59,8 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   
   const [manualFoods, setManualFoods] = useState<ManualFoodItem[]>([]);
   const [newFoodName, setNewFoodName] = useState('');
-  const [newServingSize, setNewServingSize] = useState('');
-  const [newCalories, setNewCalories] = useState('');
-  const [newProtein, setNewProtein] = useState('');
-  const [newCarbs, setNewCarbs] = useState('');
-  const [newFat, setNewFat] = useState('');
-  const [newFiber, setNewFiber] = useState('');
+  const [newServingSize, setNewServingSize] = useState('1 serving');
+  const [isLookingUp, setIsLookingUp] = useState(false);
   
   const [mealName, setMealName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -95,7 +91,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
 
       const macroPromises = foodItems.map(async (name, index) => {
         try {
-          const macros = await lookupMacroInformation({ foodItem: name });
+          const macros = await lookupMacroInformation({ foodItem: name, servingSize: '1 serving' });
           setIdentifiedFoods(prev => {
             const newFoods = [...prev];
             newFoods[index] = { ...newFoods[index], macros, status: 'loaded' };
@@ -118,32 +114,29 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
     }
   };
 
-  const addManualFood = () => {
-    if (!newFoodName || !newServingSize || !newCalories) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill in at least the food name, serving size, and calories.' });
+  const handleLookupFood = async () => {
+    if (!newFoodName) {
+      toast({ variant: 'destructive', title: 'Food Name Required', description: 'Please enter a food name to look up.' });
       return;
     }
+    setIsLookingUp(true);
+    try {
+      const macros = await lookupMacroInformation({ foodItem: newFoodName, servingSize: newServingSize });
+      const newFood: ManualFoodItem = {
+        id: Date.now().toString(),
+        name: newFoodName,
+        servingSize: newServingSize,
+        ...macros
+      };
+      setManualFoods(prev => [...prev, newFood]);
+      setNewFoodName('');
+      setNewServingSize('1 serving');
 
-    const newFood: ManualFoodItem = {
-      id: Date.now().toString(),
-      name: newFoodName,
-      servingSize: newServingSize,
-      calories: parseFloat(newCalories) || 0,
-      protein: parseFloat(newProtein) || 0,
-      carbs: parseFloat(newCarbs) || 0,
-      fat: parseFloat(newFat) || 0,
-      fiber: parseFloat(newFiber) || 0,
-    };
-
-    setManualFoods([...manualFoods, newFood]);
-    
-    setNewFoodName('');
-    setNewServingSize('');
-    setNewCalories('');
-    setNewProtein('');
-    setNewCarbs('');
-    setNewFat('');
-    setNewFiber('');
+    } catch (error) {
+       toast({ variant: 'destructive', title: 'Lookup Failed', description: `Could not find nutritional information for "${newFoodName}". Please try a different name or be more specific.` });
+    } finally {
+      setIsLookingUp(false);
+    }
   };
 
   const removeManualFood = (id: string) => {
@@ -159,6 +152,8 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
     setIsIdentifying(false);
     setIsSaving(false);
     setActiveTab('ai');
+    setNewFoodName('');
+    setNewServingSize('1 serving');
   };
 
   const handleClose = () => {
@@ -213,7 +208,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
       const mealData = {
         userId: user.uid,
         date,
-        name: mealName || 'My Meal',
+        name: mealName || (activeTab === 'ai' ? 'AI Meal' : 'Manual Meal'),
         category: 'Snacks' as const, // Default category
         foodItems,
         totals,
@@ -247,9 +242,9 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   }, [identifiedFoods, manualFoods, activeTab]);
 
   const canSave = () => {
-    if (isIdentifying) return false;
+    if (isIdentifying || isLookingUp) return false;
     if (activeTab === 'ai') {
-      return identifiedFoods.some(f => f.status === 'loaded');
+      return identifiedFoods.some(f => f.status === 'loaded' && f.macros);
     } else {
       return manualFoods.length > 0;
     }
@@ -346,108 +341,79 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
             
             <div className="space-y-4">
               <h4 className="font-medium">Add Food Items</h4>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="foodName">Food Name</Label>
-                  <Input
-                    id="foodName"
-                    value={newFoodName}
-                    onChange={(e) => setNewFoodName(e.target.value)}
-                    placeholder="e.g., Chicken Breast"
-                  />
+              <div className="flex items-end gap-2">
+                  <div className="flex-grow">
+                    <Label htmlFor="foodName">Food Name</Label>
+                    <Input
+                      id="foodName"
+                      value={newFoodName}
+                      onChange={(e) => setNewFoodName(e.target.value)}
+                      placeholder="e.g., Apple"
+                      disabled={isLookingUp}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="servingSize">Serving Size</Label>
+                    <Input
+                      id="servingSize"
+                      value={newServingSize}
+                      onChange={(e) => setNewServingSize(e.target.value)}
+                      placeholder="e.g., 1 medium"
+                      disabled={isLookingUp}
+                    />
+                  </div>
+                  <Button onClick={handleLookupFood} disabled={isLookingUp || !newFoodName}>
+                    {isLookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Find Food
+                  </Button>
                 </div>
-                <div>
-                  <Label htmlFor="servingSize">Serving Size</Label>
-                  <Input
-                    id="servingSize"
-                    value={newServingSize}
-                    onChange={(e) => setNewServingSize(e.target.value)}
-                    placeholder="e.g., 100g, 1 cup"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-5 gap-3">
-                <div>
-                  <Label htmlFor="calories">Calories</Label>
-                  <Input
-                    id="calories"
-                    type="number"
-                    value={newCalories}
-                    onChange={(e) => setNewCalories(e.target.value)}
-                    placeholder="kcal"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="protein">Protein (g)</Label>
-                  <Input
-                    id="protein"
-                    type="number"
-                    value={newProtein}
-                    onChange={(e) => setNewProtein(e.target.value)}
-                    placeholder="g"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="carbs">Carbs (g)</Label>
-                  <Input
-                    id="carbs"
-                    type="number"
-                    value={newCarbs}
-                    onChange={(e) => setNewCarbs(e.target.value)}
-                    placeholder="g"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fat">Fat (g)</Label>
-                  <Input
-                    id="fat"
-                    type="number"
-                    value={newFat}
-                    onChange={(e) => setNewFat(e.target.value)}
-                    placeholder="g"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fiber">Fiber (g)</Label>
-                  <Input
-                    id="fiber"
-                    type="number"
-                    value={newFiber}
-                    onChange={(e) => setNewFiber(e.target.value)}
-                    placeholder="g"
-                  />
-                </div>
-              </div>
-              
-              <Button onClick={addManualFood} className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Food Item
-              </Button>
             </div>
 
             {manualFoods.length > 0 && (
               <div className="space-y-3">
                 <h4 className="font-medium">Added Food Items</h4>
-                {manualFoods.map((food) => (
-                  <div key={food.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <div>
-                      <p className="font-medium">{food.name}</p>
-                      <p className="text-sm text-muted-foreground">{food.servingSize}</p>
+                <div className='border rounded-lg'>
+                {manualFoods.map((food, index) => (
+                  <div key={food.id} className={`p-3 ${index < manualFoods.length - 1 ? 'border-b' : ''}`}>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">{food.name}</p>
+                            <p className="text-sm text-muted-foreground">{food.servingSize}</p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeManualFood(food.id)}
+                            className="h-8 w-8"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm">{Math.round(food.calories)} kcal</p>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeManualFood(food.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                    <div className="grid grid-cols-5 gap-4 text-sm mt-2">
+                      <div>
+                        <p className="text-muted-foreground">Calories</p>
+                        <p className="font-medium">{Math.round(food.calories)} kcal</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Protein</p>
+                        <p className="font-medium">{Math.round(food.protein)}g</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Carbs</p>
+                        <p className="font-medium">{Math.round(food.carbs)}g</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Fat</p>
+                        <p className="font-medium">{Math.round(food.fat)}g</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Fiber</p>
+                        <p className="font-medium">{Math.round(food.fiber)}g</p>
+                      </div>
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
           </TabsContent>
@@ -455,7 +421,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
 
         {(totalMacros.calories > 0) && (
           <div className="p-4 bg-muted rounded-lg">
-            <h4 className="font-medium mb-2">Total Macros</h4>
+            <h4 className="font-medium mb-2">Total Macros for this Meal</h4>
             <div className="grid grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Calories</p>
