@@ -339,8 +339,8 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
               placeholder="Meal Name" 
             />
             
-            <div className="space-y-4">
-              <h4 className="font-medium">Add Food Items</h4>
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h4 className="font-medium">Add Food Item</h4>
               <div className="flex items-end gap-2">
                   <div className="flex-grow">
                     <Label htmlFor="foodName">Food Name</Label>
@@ -364,7 +364,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
                   </div>
                   <Button onClick={handleLookupFood} disabled={isLookingUp || !newFoodName}>
                     {isLookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    Find Food
+                    <span className="hidden sm:inline ml-2">Find Food</span>
                   </Button>
                 </div>
             </div>
@@ -389,7 +389,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
                             <X className="h-4 w-4" />
                         </Button>
                     </div>
-                    <div className="grid grid-cols-5 gap-4 text-sm mt-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 text-sm mt-2">
                       <div>
                         <p className="text-muted-foreground">Calories</p>
                         <p className="font-medium">{Math.round(food.calories)} kcal</p>
@@ -402,11 +402,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
                         <p className="text-muted-foreground">Carbs</p>
                         <p className="font-medium">{Math.round(food.carbs)}g</p>
                       </div>
-                      <div>
+                      <div className="hidden sm:block">
                         <p className="text-muted-foreground">Fat</p>
                         <p className="font-medium">{Math.round(food.fat)}g</p>
                       </div>
-                      <div>
+                      <div className="hidden sm:block">
                         <p className="text-muted-foreground">Fiber</p>
                         <p className="font-medium">{Math.round(food.fiber)}g</p>
                       </div>
@@ -422,7 +422,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
         {(totalMacros.calories > 0) && (
           <div className="p-4 bg-muted rounded-lg">
             <h4 className="font-medium mb-2">Total Macros for this Meal</h4>
-            <div className="grid grid-cols-5 gap-4 text-sm">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Calories</p>
                 <p className="font-medium">{Math.round(totalMacros.calories)} kcal</p>
@@ -435,11 +435,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
                 <p className="text-muted-foreground">Carbs</p>
                 <p className="font-medium">{Math.round(totalMacros.carbs)}g</p>
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <p className="text-muted-foreground">Fat</p>
                 <p className="font-medium">{Math.round(totalMacros.fat)}g</p>
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <p className="text-muted-foreground">Fiber</p>
                 <p className="font-medium">{Math.round(totalMacros.fiber)}g</p>
               </div>
