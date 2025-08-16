@@ -102,7 +102,7 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="your_username" {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
