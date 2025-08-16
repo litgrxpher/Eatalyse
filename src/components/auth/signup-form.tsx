@@ -18,6 +18,7 @@ import { Loader2, Terminal } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 const formSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   username: z.string().min(3, { message: 'Username must be at least 3 characters.' }).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
@@ -30,6 +31,7 @@ export function SignupForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: '',
       username: '',
       password: '',
     },
@@ -57,7 +59,7 @@ export function SignupForm() {
       console.log('User created, creating profile for:', userCredential.user.uid);
       await createUserProfile(userCredential.user.uid, {
         email: email,
-        displayName: values.username,
+        displayName: values.name,
         photoURL: null
       });
       console.log('Profile created, redirecting to dashboard');
@@ -88,6 +90,19 @@ export function SignupForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Your Name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="username"
