@@ -70,7 +70,7 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt' | 'photoUr
     
     const docId = uuidv4();
     
-    const mealToSave: Omit<Meal, 'photoUrl'> & { photoUrl?: string } = {
+    const mealToSave: Partial<Meal> = {
       ...mealData,
       id: docId,
       createdAt: Date.now(),
@@ -194,7 +194,7 @@ export const getWeeklyTrends = async (userId: string) => {
       collection(db, 'meals'),
       where('userId', '==', userId),
       where('createdAt', '>=', weekAgo.getTime()),
-      orderBy('createdAt', 'asc')
+      orderBy('userId', 'asc')
     );
 
     const querySnapshot = await getDocs(q);
