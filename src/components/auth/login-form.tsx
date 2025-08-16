@@ -92,27 +92,6 @@ export function LoginForm() {
     }
   }
 
-  // Test function to verify Firebase connection
-  const testFirebaseConnection = async () => {
-    try {
-      console.log('🧪 Testing Firebase connection...');
-      const auth = getAuthInstance();
-      console.log('✅ Firebase Auth instance:', !!auth);
-      console.log('✅ Firebase configured:', isFirebaseConfigured());
-      toast({
-        title: 'Firebase Test',
-        description: 'Firebase connection successful! Check console for details.',
-      });
-    } catch (error) {
-      console.error('❌ Firebase connection test failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Firebase Test Failed',
-        description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      });
-    }
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -145,16 +124,6 @@ export function LoginForm() {
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Login
-        </Button>
-        
-        {/* Test button */}
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full" 
-          onClick={testFirebaseConnection}
-        >
-          🧪 Test Firebase Connection
         </Button>
       </form>
     </Form>
