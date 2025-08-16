@@ -247,8 +247,9 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   }, [identifiedFoods, manualFoods, activeTab]);
 
   const canSave = () => {
+    if (isIdentifying) return false;
     if (activeTab === 'ai') {
-      return identifiedFoods.filter(f => f.status === 'loaded').length > 0;
+      return identifiedFoods.some(f => f.status === 'loaded');
     } else {
       return manualFoods.length > 0;
     }
