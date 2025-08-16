@@ -10,8 +10,10 @@ import { MacroSummary } from "./macro-summary";
 import { AddMealDialog } from "./add-meal-dialog";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
-import { PlusCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlusCircle, ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
 import { MealList } from "./meal-list";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
 
 export function DashboardClient() {
   const { user, userProfile, loading } = useAuth();
@@ -103,6 +105,27 @@ export function DashboardClient() {
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous Day</span>
            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} size={"icon"}>
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="sr-only">Pick a date</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={currentDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setCurrentDate(date)
+                    }
+                  }}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
            <Button variant="outline" size="icon" onClick={handleNextDay} disabled={isToday(currentDate)}>
               <ChevronRight className="h-4 w-4" />
                <span className="sr-only">Next Day</span>
