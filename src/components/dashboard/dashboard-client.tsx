@@ -18,6 +18,7 @@ export function DashboardClient() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchMeals = useCallback(async () => {
@@ -38,9 +39,23 @@ export function DashboardClient() {
     fetchMeals();
   }, [fetchMeals]);
 
+  const handleOpenAddDialog = () => {
+    setEditingMeal(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = (meal: Meal) => {
+    setEditingMeal(meal);
+    setIsDialogOpen(true);
+  };
+
   const handleMealDeleted = (mealId: string) => {
     setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
   };
+  
+  const handleMealSaved = () => {
+    fetchMeals();
+  }
 
   const dailyTotals = useMemo(() => {
     return meals.reduce(
@@ -82,22 +97,26 @@ export function DashboardClient() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">Today's Meals</h3>
-           <Button onClick={() => setIsDialogOpen(true)}>
+           <Button onClick={handleOpenAddDialog}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Meal
            </Button>
         </div>
         
-        <MealList meals={meals} isLoading={isLoading} onMealDeleted={handleMealDeleted} />
+        <MealList 
+          meals={meals} 
+          isLoading={isLoading} 
+          onMealDeleted={handleMealDeleted} 
+          onMealEdit={handleOpenEditDialog}
+        />
       </div>
       
       <AddMealDialog
         isOpen={isDialogOpen}
         setIsOpen={setIsDialogOpen}
-        onMealAdded={() => {
-          fetchMeals();
-        }}
+        onMealSaved={handleMealSaved}
         date={format(currentDate, "yyyy-MM-dd")}
+        initialMealData={editingMeal}
       />
     </div>
   );

@@ -18,16 +18,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
 import { identifyFoodFromImage } from '@/ai/flows/identify-food-from-image';
 import { lookupMacroInformation } from '@/ai/flows/lookup-macro-information';
-import { addMeal } from '@/lib/firestore';
-import type { FoodItem, LookupMacroInformationOutput } from '@/types';
+import { addMeal, updateMeal } from '@/lib/firestore';
+import type { FoodItem, LookupMacroInformationOutput, Meal } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, Loader2, X, Plus, Calculator, Image as ImageIcon, Search } from 'lucide-react';
 
 interface AddMealDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onMealAdded: () => void;
+  onMealSaved: () => void;
   date: string;
+  initialMealData?: Meal | null;
 }
 
 type IdentifiedFood = {
@@ -47,9 +48,11 @@ type ManualFoodItem = {
   fiber: number;
 };
 
-export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealDialogProps) {
+export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMealData }: AddMealDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isEditMode, setIsEditMode] = useState(false);
+  
   const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
   
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -65,6 +68,26 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   const [mealName, setMealName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialMealData) {
+      setIsEditMode(true);
+      setMealName(initialMealData.name);
+      setImagePreview(initialMealData.photoUrl || null);
+      
+      const foods = initialMealData.foodItems.map(item => ({
+        ...item,
+        id: item.id || Date.now().toString() + Math.random(),
+      }));
+      setManualFoods(foods);
+      
+      setActiveTab('manual'); // Default to manual tab for editing
+    } else {
+      setIsEditMode(false);
+      resetState();
+    }
+  }, [initialMealData, isOpen]);
+
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -159,15 +182,15 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   const handleClose = () => {
     resetState();
     setIsOpen(false);
-    onMealAdded();
   };
 
   const handleSaveMeal = async () => {
     if (!user) return;
     
     let foodItems: FoodItem[] = [];
+    let currentTab = isEditMode ? 'manual' : activeTab;
     
-    if (activeTab === 'ai') {
+    if (currentTab === 'ai') {
       foodItems = identifiedFoods
         .filter(f => f.status === 'loaded' && f.macros)
         .map(f => ({
@@ -205,19 +228,29 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
         return acc;
       }, {calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0});
 
-      const mealData = {
-        userId: user.uid,
-        date,
-        name: mealName || (activeTab === 'ai' ? 'AI Meal' : 'Manual Meal'),
-        category: 'Snacks' as const, // Default category
-        foodItems,
-        totals,
-        photoUrl: imagePreview || undefined
-      };
-
-      await addMeal(mealData, imageFile || undefined);
+      if (isEditMode && initialMealData) {
+         const mealUpdateData = {
+          name: mealName || 'Edited Meal',
+          foodItems,
+          totals,
+        };
+        await updateMeal(initialMealData.id, mealUpdateData);
+        toast({ title: 'Meal updated!', description: 'Your meal has been successfully updated.' });
+      } else {
+        const mealData = {
+          userId: user.uid,
+          date,
+          name: mealName || (activeTab === 'ai' ? 'AI Meal' : 'Manual Meal'),
+          category: 'Snacks' as const, // Default category
+          foodItems,
+          totals,
+          photoUrl: imagePreview || undefined
+        };
+        await addMeal(mealData, imageFile || undefined);
+        toast({ title: 'Meal saved!', description: 'Your meal has been added to your log.' });
+      }
       
-      toast({ title: 'Meal saved!', description: 'Your meal has been added to your log.' });
+      onMealSaved();
       handleClose();
     } catch(error) {
       toast({ variant: 'destructive', title: 'Error saving meal', description: `Something went wrong: ${error instanceof Error ? error.message : 'Unknown error'}`});
@@ -227,7 +260,8 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
   };
   
   const totalMacros = useMemo(() => {
-    const items = activeTab === 'ai' 
+    const currentTab = isEditMode ? 'manual' : activeTab;
+    const items = currentTab === 'ai' 
       ? identifiedFoods.filter(f => f.status === 'loaded' && f.macros).map(f => f.macros!)
       : manualFoods;
       
@@ -239,11 +273,12 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
         acc.fiber += item.fiber;
         return acc;
       }, {calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0});
-  }, [identifiedFoods, manualFoods, activeTab]);
+  }, [identifiedFoods, manualFoods, activeTab, isEditMode]);
 
   const canSave = () => {
     if (isIdentifying || isLookingUp) return false;
-    if (activeTab === 'ai') {
+    const currentTab = isEditMode ? 'manual' : activeTab;
+    if (currentTab === 'ai') {
       return identifiedFoods.some(f => f.status === 'loaded' && f.macros);
     } else {
       return manualFoods.length > 0;
@@ -254,15 +289,15 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
     <Dialog open={isOpen} onOpenChange={(open) => !open ? handleClose() : setIsOpen(true)}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Meal</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Meal' : 'Add Meal'}</DialogTitle>
           <DialogDescription>
-            Use AI to analyze a photo or enter macros manually.
+            {isEditMode ? 'Modify your meal details below.' : 'Use AI to analyze a photo or enter macros manually.'}
           </DialogDescription>
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'ai' | 'manual')}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai" className="flex items-center gap-2">
+            <TabsTrigger value="ai" className="flex items-center gap-2" disabled={isEditMode}>
               <ImageIcon className="h-4 w-4" />
               AI Photo Analysis
             </TabsTrigger>
@@ -451,7 +486,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
           <Button variant="outline" onClick={handleClose}>Cancel</Button>
           <Button onClick={handleSaveMeal} disabled={isSaving || !canSave()}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Meal
+            {isEditMode ? 'Save Changes' : 'Save Meal'}
           </Button>
         </DialogFooter>
       </DialogContent>

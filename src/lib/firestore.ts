@@ -97,6 +97,17 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFil
   }
 }
 
+export async function updateMeal(mealId: string, updates: Partial<Meal>): Promise<void> {
+  try {
+    const db = getFirestoreInstance();
+    const mealDocRef = doc(db, 'meals', mealId);
+    await updateDoc(mealDocRef, updates);
+  } catch (error) {
+    console.error('Error updating meal:', error);
+    throw error;
+  }
+}
+
 export async function getMealsForDay(userId: string, date: Date): Promise<Meal[]> {
   try {
     const db = getFirestoreInstance();

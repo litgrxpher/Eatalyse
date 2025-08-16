@@ -7,9 +7,10 @@ interface MealListProps {
   meals: Meal[];
   isLoading: boolean;
   onMealDeleted: (mealId: string) => void;
+  onMealEdit: (meal: Meal) => void;
 }
 
-export function MealList({ meals, isLoading, onMealDeleted }: MealListProps) {
+export function MealList({ meals, isLoading, onMealDeleted, onMealEdit }: MealListProps) {
   if (isLoading) {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -34,7 +35,12 @@ export function MealList({ meals, isLoading, onMealDeleted }: MealListProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {meals.map((meal) => (
-        <MealCard key={meal.id} meal={meal} onMealDeleted={onMealDeleted} />
+        <MealCard 
+          key={meal.id} 
+          meal={meal} 
+          onMealDeleted={onMealDeleted}
+          onMealEdit={onMealEdit}
+        />
       ))}
     </div>
   );
