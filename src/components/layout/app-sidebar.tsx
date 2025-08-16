@@ -1,17 +1,15 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BarChart2, Settings, LifeBuoy } from 'lucide-react';
+import { Home, BarChart2 } from 'lucide-react';
 import { Logo } from '../logo';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function AppSidebar() {
