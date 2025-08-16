@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useMemo, useEffect } from 'react';
-import Image from 'next/image';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,14 +13,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
-import { identifyFoodFromImage } from '@/ai/flows/identify-food-from-image';
 import { lookupMacroInformation } from '@/ai/flows/lookup-macro-information';
 import { addMeal, updateMeal } from '@/lib/firestore';
 import type { FoodItem, LookupMacroInformationOutput, Meal } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, Loader2, X, Plus, Calculator, Image as ImageIcon, Search } from 'lucide-react';
+import { Loader2, X, Plus } from 'lucide-react';
 
 interface AddMealDialogProps {
   isOpen: boolean;
@@ -30,12 +27,6 @@ interface AddMealDialogProps {
   date: string;
   initialMealData?: Meal | null;
 }
-
-type IdentifiedFood = {
-  name: string;
-  macros?: LookupMacroInformationOutput;
-  status: 'loading' | 'loaded' | 'error';
-};
 
 type ManualFoodItem = {
   id: string;
@@ -53,13 +44,6 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   const { toast } = useToast();
   const [isEditMode, setIsEditMode] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
-  
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [identifiedFoods, setIdentifiedFoods] = useState<IdentifiedFood[]>([]);
-  const [isIdentifying, setIsIdentifying] = useState(false);
-  
   const [manualFoods, setManualFoods] = useState<ManualFoodItem[]>([]);
   const [newFoodName, setNewFoodName] = useState('');
   const [newServingSize, setNewServingSize] = useState('1 serving');
@@ -67,14 +51,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   
   const [mealName, setMealName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialMealData) {
       setIsEditMode(true);
       setMealName(initialMealData.name);
-      setImagePreview(initialMealData.photoUrl || null);
-      setImageFile(null);
       
       const foods = initialMealData.foodItems.map(item => ({
         ...item,
@@ -82,61 +63,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
       }));
       setManualFoods(foods);
       
-      setActiveTab('manual');
     } else {
       setIsEditMode(false);
       resetState();
     }
   }, [initialMealData, isOpen]);
-
-
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUri = reader.result as string;
-        setImagePreview(dataUri);
-        processImage(dataUri);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const processImage = async (dataUri: string) => {
-    setIsIdentifying(true);
-    setIdentifiedFoods([]);
-    try {
-      const { foodItems } = await identifyFoodFromImage({ photoDataUri: dataUri });
-      setMealName(foodItems.length > 0 ? foodItems.join(', ') : 'My Meal');
-      const initialFoods = foodItems.map(name => ({ name, status: 'loading' } as IdentifiedFood));
-      setIdentifiedFoods(initialFoods);
-
-      const macroPromises = foodItems.map(async (name, index) => {
-        try {
-          const macros = await lookupMacroInformation({ foodItem: name, servingSize: '1 serving' });
-          setIdentifiedFoods(prev => {
-            const newFoods = [...prev];
-            newFoods[index] = { ...newFoods[index], macros, status: 'loaded' };
-            return newFoods;
-          });
-        } catch (error) {
-           setIdentifiedFoods(prev => {
-            const newFoods = [...prev];
-            newFoods[index] = { ...newFoods[index], status: 'error' };
-            return newFoods;
-          });
-        }
-      });
-      await Promise.all(macroPromises);
-
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error identifying food', description: 'Could not identify food from the image. Please try again or enter manually.' });
-    } finally {
-      setIsIdentifying(false);
-    }
-  };
 
   const handleLookupFood = async () => {
     if (!newFoodName) {
@@ -168,14 +99,9 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   };
 
   const resetState = () => {
-    setImagePreview(null);
-    setImageFile(null);
-    setIdentifiedFoods([]);
     setManualFoods([]);
     setMealName('');
-    setIsIdentifying(false);
     setIsSaving(false);
-    setActiveTab('ai');
     setNewFoodName('');
     setNewServingSize('1 serving');
   };
@@ -192,30 +118,16 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   const handleSaveMeal = async () => {
     if (!user) return;
     
-    let foodItems: FoodItem[] = [];
-    let currentTab = isEditMode ? 'manual' : activeTab;
-    
-    if (currentTab === 'ai') {
-      foodItems = identifiedFoods
-        .filter(f => f.status === 'loaded' && f.macros)
-        .map(f => ({
-          id: f.name,
-          name: f.name,
-          servingSize: '1 serving',
-          ...f.macros!
-        }));
-    } else {
-      foodItems = manualFoods.map(food => ({
-        id: food.id,
-        name: food.name,
-        servingSize: food.servingSize,
-        calories: food.calories,
-        protein: food.protein,
-        carbs: food.carbs,
-        fat: food.fat,
-        fiber: food.fiber,
-      }));
-    }
+    let foodItems: FoodItem[] = manualFoods.map(food => ({
+      id: food.id,
+      name: food.name,
+      servingSize: food.servingSize,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      fiber: food.fiber,
+    }));
 
     if (foodItems.length === 0) {
       toast({ variant: 'destructive', title: 'No Food Items', description: 'Please add at least one food item before saving.' });
@@ -245,12 +157,12 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
         const mealData = {
           userId: user.uid,
           date,
-          name: mealName || (activeTab === 'ai' ? 'AI Meal' : 'Manual Meal'),
+          name: mealName || 'Manual Meal',
           category: 'Snacks' as const,
           foodItems,
           totals,
         };
-        await addMeal(mealData, imageFile || undefined);
+        await addMeal(mealData);
         toast({ title: 'Meal saved!', description: 'Your meal has been added to your log.' });
       }
       
@@ -264,12 +176,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   };
   
   const totalMacros = useMemo(() => {
-    const currentTab = isEditMode ? 'manual' : activeTab;
-    const items = currentTab === 'ai' 
-      ? identifiedFoods.filter(f => f.status === 'loaded' && f.macros).map(f => f.macros!)
-      : manualFoods;
-      
-    return items.reduce((acc, item) => {
+    return manualFoods.reduce((acc, item) => {
         acc.calories += item.calories;
         acc.protein += item.protein;
         acc.carbs += item.carbs;
@@ -277,16 +184,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
         acc.fiber += item.fiber;
         return acc;
       }, {calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0});
-  }, [identifiedFoods, manualFoods, activeTab, isEditMode]);
+  }, [manualFoods]);
 
   const canSave = () => {
-    if (isIdentifying || isLookingUp || isSaving) return false;
-    const currentTab = isEditMode ? 'manual' : activeTab;
-    if (currentTab === 'ai') {
-      return identifiedFoods.some(f => f.status === 'loaded' && f.macros);
-    } else {
-      return manualFoods.length > 0;
-    }
+    if (isLookingUp || isSaving) return false;
+    return manualFoods.length > 0;
   };
 
   return (
@@ -295,83 +197,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Meal' : 'Add Meal'}</DialogTitle>
           <DialogDescription>
-            {isEditMode ? 'Modify your meal details below.' : 'Use AI to analyze a photo or enter macros manually.'}
+            {isEditMode ? 'Modify your meal details below.' : 'Enter macros manually.'}
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'ai' | 'manual')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai" className="flex items-center gap-2" disabled={isEditMode}>
-              <ImageIcon className="h-4 w-4" />
-              AI Photo Analysis
-            </TabsTrigger>
-            <TabsTrigger value="manual" className="flex items-center gap-2">
-              <Calculator className="h-4 w-4" />
-              Manual Entry
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="ai" className="space-y-4">
-            {!imagePreview ? (
-              <div 
-                className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Camera className="h-12 w-12 text-muted-foreground" />
-                <p className="mt-4 text-center text-muted-foreground">
-                  Click to upload a photo or drag and drop
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  AI will identify food items and estimate macros
-                </p>
-                <Input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                />
-              </div>
-            ) : (
-              <div className="relative">
-                <Image src={imagePreview} alt="Meal preview" width={600} height={400} className="rounded-lg object-cover" />
-                <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={resetState}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-
-            {isIdentifying && (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                <span>Identifying food and calculating macros...</span>
-              </div>
-            )}
-
-            {identifiedFoods.length > 0 && (
-              <div className="space-y-4">
-                <Input 
-                  value={mealName} 
-                  onChange={(e) => setMealName(e.target.value)} 
-                  placeholder="Meal Name" 
-                />
-                <div className="space-y-2">
-                  {identifiedFoods.map((food, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                      <p className="font-medium">{food.name}</p>
-                      {food.status === 'loading' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                      {food.status === 'loaded' && food.macros && (
-                        <p className="text-sm text-muted-foreground">{Math.round(food.macros.calories)} kcal</p>
-                      )}
-                      {food.status === 'error' && <p className="text-sm text-destructive">Error</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="manual" className="space-y-4">
+        <div className="space-y-4">
             <Input 
               value={mealName} 
               onChange={(e) => setMealName(e.target.value)} 
@@ -457,8 +287,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
                 </div>
               </div>
             )}
-          </TabsContent>
-        </Tabs>
+        </div>
 
         {(totalMacros.calories > 0) && (
           <div className="p-4 bg-muted rounded-lg">

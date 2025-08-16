@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Camera, Zap, BarChart } from 'lucide-react';
+import { ArrowRight, Calculator, Zap, BarChart } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
 export default function LandingPage() {
@@ -27,7 +27,7 @@ export default function LandingPage() {
             Stop Guessing. Start Tracking.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            MacroMate is the effortless way to track your meals. Just snap a photo, and our AI will handle the rest. Achieve your fitness goals faster.
+            MacroMate is the effortless way to track your meals. Use our AI-powered search to instantly get nutritional information and achieve your fitness goals faster.
           </p>
           <Button size="lg" asChild>
             <Link href="/signup">
@@ -40,11 +40,11 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div className="flex flex-col items-center">
               <div className="p-4 bg-secondary rounded-full mb-4">
-                <Camera className="w-8 h-8 text-primary" />
+                <Calculator className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 font-headline">Snap & Track</h3>
+              <h3 className="text-xl font-semibold mb-2 font-headline">Manual Entry</h3>
               <p className="text-muted-foreground">
-                Take a picture of your meal. Our AI identifies the food and logs the macros for you.
+                Easily search for food items and serving sizes to log your meals.
               </p>
             </div>
             <div className="flex flex-col items-center">
