@@ -2,7 +2,7 @@
 import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, orderBy, deleteDoc, updateDoc, Timestamp, writeBatch, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFirestoreInstance, getStorageInstance } from './firebase';
-import type { UserProfile, Goals, Meal, FoodItem } from '@/types';
+import type { UserProfile, Goals, Meal, FoodItem, WeightEntry } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function createUserProfile(userId: string, userData: Partial<UserProfile>): Promise<void> {
@@ -25,6 +25,8 @@ export async function createUserProfile(userId: string, userData: Partial<UserPr
         email: userData.email || null,
         displayName: userData.displayName || null,
         photoURL: userData.photoURL || null,
+        height: null,
+        weight: null,
         goals: userData.goals || defaultGoals,
       };
       
@@ -211,4 +213,40 @@ export const getWeeklyTrends = async (userId: string) => {
     throw error;
   }
 };
+
+export async function addWeightEntry(userId: string, weight: number): Promise<void> {
+  try {
+    const db = getFirestoreInstance();
+    const date = new Date().toISOString().split('T')[0];
+    const weightEntry: WeightEntry = { date, weight };
+
+    const weightHistoryRef = collection(db, 'users', userId, 'weightHistory');
+    await addDoc(weightHistoryRef, weightEntry);
+    
+    // Also update the latest weight on the user profile
+    await updateUserProfile(userId, { weight });
+  } catch (error) {
+    console.error('Error adding weight entry:', error);
+    throw error;
+  }
+}
+
+export async function getWeightHistory(userId: string): Promise<WeightEntry[]> {
+  try {
+    const db = getFirestoreInstance();
+    const weightHistoryRef = collection(db, 'users', userId, 'weightHistory');
+    const q = query(weightHistoryRef, orderBy('date', 'asc'));
+    const querySnapshot = await getDocs(q);
+    
+    const weightHistory: WeightEntry[] = [];
+    querySnapshot.forEach((doc) => {
+      weightHistory.push(doc.data() as WeightEntry);
+    });
+
+    return weightHistory;
+  } catch (error) {
+    console.error('Error getting weight history:', error);
+    throw error;
+  }
+}
     

@@ -3,6 +3,8 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  height: number | null;
+  weight: number | null;
   goals: Goals;
 }
 
@@ -45,4 +47,9 @@ export interface LookupMacroInformationOutput {
   carbs: number;
   fat: number;
   fiber: number;
+}
+
+export interface WeightEntry {
+  date: string; // YYYY-MM-DD
+  weight: number;
 }

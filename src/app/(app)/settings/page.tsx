@@ -2,6 +2,8 @@
 'use client';
 
 import { GoalsForm } from "@/components/settings/goals-form";
+import { ProfileForm } from "@/components/settings/profile-form";
+import { WeightTracker } from "@/components/settings/weight-tracker";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getAuthInstance } from "@/lib/firebase";
@@ -38,9 +40,29 @@ export default function SettingsPage() {
        <div>
         <h1 className="text-3xl font-bold tracking-tight font-headline">Settings</h1>
         <p className="text-muted-foreground">
-          Manage your profile and daily nutritional goals.
+          Manage your profile, goals, and track your progress.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>Update your personal details.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ProfileForm />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Weight Tracking</CardTitle>
+            <CardDescription>Log your weight and see your progress over time.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <WeightTracker />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
