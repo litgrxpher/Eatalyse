@@ -84,7 +84,7 @@ export function DashboardClient() {
   if (loading || !user || !userProfile) {
     return (
       <div className="space-y-8">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
@@ -97,10 +97,14 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-         <h2 className="text-2xl font-semibold tracking-tight">Daily Summary for {format(currentDate, "MMMM d, yyyy")}</h2>
-         <div className="flex items-center gap-2">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+         <div className="flex-1">
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
+            {isToday(currentDate) ? "Today's Summary" : `Summary for ${format(currentDate, "MMMM d, yyyy")}`}
+          </h2>
+         </div>
+         <div className="flex items-center gap-2 self-end sm:self-center">
            <Button variant="outline" size="icon" onClick={handlePreviousDay}>
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous Day</span>
@@ -135,12 +139,12 @@ export function DashboardClient() {
 
       <MacroSummary dailyTotals={dailyTotals} goals={userProfile.goals} />
       
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Meals for {format(currentDate, "MMMM d")}</h3>
+          <h3 className="text-lg sm:text-xl font-semibold">Meals</h3>
            <Button onClick={handleOpenAddDialog}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Meal
+              <PlusCircle className="mr-0 sm:mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Add Meal</span>
            </Button>
         </div>
         

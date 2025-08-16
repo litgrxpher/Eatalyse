@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Meal } from "@/types";
@@ -75,10 +76,9 @@ export function MealCard({ meal, onMealDeleted, onMealEdit }: MealCardProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        {/* Meal image */}
-        {meal.photoUrl && (
+    <Card className="flex flex-col">
+      <CardHeader className="p-0">
+        {meal.photoUrl ? (
           <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
             <Image
               src={meal.photoUrl}
@@ -87,19 +87,21 @@ export function MealCard({ meal, onMealDeleted, onMealEdit }: MealCardProps) {
               className="object-cover"
             />
           </div>
+        ) : (
+          <div className="h-4 bg-muted rounded-t-lg"></div>
         )}
+      </CardHeader>
 
-        {/* Title + actions */}
-        <div className="flex justify-between items-start mt-4">
-          <div>
-            <CardTitle>{meal.name}</CardTitle>
-            <CardDescription>
+      <div className="p-4 flex-grow flex flex-col">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <CardTitle className="text-lg">{meal.name}</CardTitle>
+            <CardDescription className="text-xs">
               {meal.foodItems.map((item) => item.name).join(", ")}
             </CardDescription>
           </div>
 
-          <div className="flex items-center gap-1">
-            {/* Edit button */}
+          <div className="flex items-center gap-1 -mr-2 -mt-2">
             <Button
               variant="ghost"
               size="icon"
@@ -109,7 +111,6 @@ export function MealCard({ meal, onMealDeleted, onMealEdit }: MealCardProps) {
               <Pencil className="h-4 w-4 text-muted-foreground" />
             </Button>
 
-            {/* Delete button with confirmation dialog */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -154,25 +155,24 @@ export function MealCard({ meal, onMealDeleted, onMealEdit }: MealCardProps) {
             </AlertDialog>
           </div>
         </div>
-      </CardHeader>
 
-      {/* Nutritional info */}
-      <CardContent>
-        <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
-          <p>
-            <strong>Calories:</strong> {Math.round(meal.totals.calories)} kcal
-          </p>
-          <p>
-            <strong>Protein:</strong> {Math.round(meal.totals.protein)} g
-          </p>
-          <p>
-            <strong>Carbs:</strong> {Math.round(meal.totals.carbs)} g
-          </p>
-          <p>
-            <strong>Fat:</strong> {Math.round(meal.totals.fat)} g
-          </p>
-        </div>
-      </CardContent>
+        <CardContent className="p-0 mt-4 flex-grow">
+          <div className="text-xs text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1">
+            <p>
+              <strong>Calories:</strong> {Math.round(meal.totals.calories)} kcal
+            </p>
+            <p>
+              <strong>Protein:</strong> {Math.round(meal.totals.protein)} g
+            </p>
+            <p>
+              <strong>Carbs:</strong> {Math.round(meal.totals.carbs)} g
+            </p>
+            <p>
+              <strong>Fat:</strong> {Math.round(meal.totals.fat)} g
+            </p>
+          </div>
+        </CardContent>
+      </div>
     </Card>
   );
 }

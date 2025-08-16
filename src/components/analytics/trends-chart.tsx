@@ -21,7 +21,7 @@ type TrendData = {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="p-2 bg-background border rounded-lg shadow-sm">
+      <div className="p-2 bg-background border rounded-lg shadow-sm text-sm">
         <p className="font-bold">{format(parseISO(label), "EEEE, MMM d")}</p>
         {payload.map((pld: any) => (
           <p key={pld.dataKey} style={{ color: pld.fill }}>
@@ -93,7 +93,8 @@ export function TrendsChart() {
               tickLine={false}
               axisLine={false}
               tickFormatter={(value) => `${value}`}
-              label={{ value: 'Grams', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
+              label={{ value: 'Grams', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', style: {textAnchor: 'middle'} }}
+              width={40}
             />
              <YAxis
               yAxisId="right"
@@ -103,10 +104,11 @@ export function TrendsChart() {
               tickLine={false}
               axisLine={false}
               tickFormatter={(value) => `${value}`}
-              label={{ value: 'Calories (kcal)', angle: -90, position: 'insideRight', fill: 'hsl(var(--muted-foreground))' }}
+              label={{ value: 'Calories (kcal)', angle: -90, position: 'insideRight', fill: 'hsl(var(--muted-foreground))', style: {textAnchor: 'middle'} }}
+              width={40}
             />
             <Tooltip content={<CustomTooltip />} cursor={{fill: 'hsl(var(--muted))'}} />
-            <Legend wrapperStyle={{paddingTop: '20px'}} />
+            <Legend wrapperStyle={{fontSize: '0.875rem', paddingTop: '20px'}} />
             <Bar yAxisId="right" dataKey="calories" name="Calories" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
             <Bar yAxisId="left" dataKey="protein" name="Protein" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
             <Bar yAxisId="left" dataKey="carbs" name="Carbs" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
