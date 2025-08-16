@@ -63,27 +63,24 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   }
 }
 
-export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFile?: File): Promise<string> {
+export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt' | 'photoUrl'>, imageFile?: File): Promise<string> {
   try {
     const storage = getStorageInstance();
     const db = getFirestoreInstance();
     
-    let photoUrl: string | undefined;
-    
-    if (imageFile) {
-      const storageRef = ref(storage, `meals/${mealData.userId}/${uuidv4()}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
-      photoUrl = await getDownloadURL(snapshot.ref);
-    }
-    
     const docId = uuidv4();
     
-    const mealToSave: Meal = {
+    const mealToSave: Omit<Meal, 'photoUrl'> & { photoUrl?: string } = {
       ...mealData,
       id: docId,
       createdAt: Date.now(),
-      ...(photoUrl && { photoUrl }), // Conditionally add photoUrl
     };
+    
+    if (imageFile) {
+      const storageRef = ref(storage, `meals/${mealData.userId}/${docId}`);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      mealToSave.photoUrl = await getDownloadURL(snapshot.ref);
+    }
     
     await setDoc(doc(db, 'meals', docId), mealToSave);
     
@@ -100,7 +97,6 @@ export async function updateMeal(mealId: string, updates: Partial<Meal>): Promis
     const db = getFirestoreInstance();
     const mealDocRef = doc(db, 'meals', mealId);
     
-    // Ensure the ID is part of the update to maintain data integrity
     const dataToUpdate = {
       ...updates,
       id: mealId,
@@ -154,23 +150,18 @@ export async function deleteMeal(mealId: string, userId: string): Promise<void> 
     
     const mealData = mealDoc.data() as Meal;
       
-    // Delete the photo from storage first if it exists
     if (mealData.photoUrl) {
       try {
         const photoRef = ref(storage, mealData.photoUrl);
         await deleteObject(photoRef);
         console.log('Photo deleted from storage successfully.');
       } catch (storageError: any) {
-        // If the file doesn't exist, we can ignore the error
         if (storageError.code !== 'storage/object-not-found') {
-          console.warn('Error deleting photo from storage:', storageError);
-          // We can choose to either re-throw or just log the error and continue
-          // For a better user experience, we will log it and proceed to delete the firestore doc
+          console.warn('Could not delete photo from storage, but proceeding to delete Firestore document:', storageError);
         }
       }
     }
 
-    // Then, delete the meal document
     await deleteDoc(mealDocRef);
     console.log('Meal document deleted from Firestore successfully.');
 

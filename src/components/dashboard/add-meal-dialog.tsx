@@ -74,6 +74,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
       setIsEditMode(true);
       setMealName(initialMealData.name);
       setImagePreview(initialMealData.photoUrl || null);
+      setImageFile(null);
       
       const foods = initialMealData.foodItems.map(item => ({
         ...item,
@@ -81,7 +82,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
       }));
       setManualFoods(foods);
       
-      setActiveTab('manual'); // Default to manual tab for editing
+      setActiveTab('manual');
     } else {
       setIsEditMode(false);
       resetState();
@@ -180,8 +181,12 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   };
 
   const handleClose = () => {
-    resetState();
     setIsOpen(false);
+    // Delay resetting state to prevent jarring UI shift during close animation
+    setTimeout(() => {
+      resetState();
+      setIsEditMode(false);
+    }, 300);
   };
 
   const handleSaveMeal = async () => {
@@ -241,10 +246,9 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
           userId: user.uid,
           date,
           name: mealName || (activeTab === 'ai' ? 'AI Meal' : 'Manual Meal'),
-          category: 'Snacks' as const, // Default category
+          category: 'Snacks' as const,
           foodItems,
           totals,
-          photoUrl: imagePreview || undefined
         };
         await addMeal(mealData, imageFile || undefined);
         toast({ title: 'Meal saved!', description: 'Your meal has been added to your log.' });
@@ -276,7 +280,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
   }, [identifiedFoods, manualFoods, activeTab, isEditMode]);
 
   const canSave = () => {
-    if (isIdentifying || isLookingUp) return false;
+    if (isIdentifying || isLookingUp || isSaving) return false;
     const currentTab = isEditMode ? 'manual' : activeTab;
     if (currentTab === 'ai') {
       return identifiedFoods.some(f => f.status === 'loaded' && f.macros);
@@ -371,7 +375,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
             <Input 
               value={mealName} 
               onChange={(e) => setMealName(e.target.value)} 
-              placeholder="Meal Name" 
+              placeholder="Meal Name, e.g. Chicken Salad" 
             />
             
             <div className="space-y-4 p-4 border rounded-lg">
@@ -383,23 +387,25 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
                       id="foodName"
                       value={newFoodName}
                       onChange={(e) => setNewFoodName(e.target.value)}
-                      placeholder="e.g., Apple"
+                      placeholder="e.g., Grilled Chicken Breast"
                       disabled={isLookingUp}
+                      onKeyDown={(e) => e.key === 'Enter' && handleLookupFood()}
                     />
                   </div>
-                  <div>
+                  <div className="w-40">
                     <Label htmlFor="servingSize">Serving Size</Label>
                     <Input
                       id="servingSize"
                       value={newServingSize}
                       onChange={(e) => setNewServingSize(e.target.value)}
-                      placeholder="e.g., 1 medium"
+                      placeholder="e.g., 100g"
                       disabled={isLookingUp}
+                      onKeyDown={(e) => e.key === 'Enter' && handleLookupFood()}
                     />
                   </div>
                   <Button onClick={handleLookupFood} disabled={isLookingUp || !newFoodName}>
-                    {isLookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    <span className="hidden sm:inline ml-2">Find Food</span>
+                    {isLookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    <span className="hidden sm:inline ml-2">Add</span>
                   </Button>
                 </div>
             </div>
@@ -410,7 +416,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
                 <div className='border rounded-lg'>
                 {manualFoods.map((food, index) => (
                   <div key={food.id} className={`p-3 ${index < manualFoods.length - 1 ? 'border-b' : ''}`}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between">
                         <div>
                             <p className="font-medium">{food.name}</p>
                             <p className="text-sm text-muted-foreground">{food.servingSize}</p>
@@ -419,7 +425,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
                             variant="ghost"
                             size="icon"
                             onClick={() => removeManualFood(food.id)}
-                            className="h-8 w-8"
+                            className="h-8 w-8 shrink-0"
                         >
                             <X className="h-4 w-4" />
                         </Button>
@@ -464,8 +470,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
               </div>
               <div>
                 <p className="text-muted-foreground">Protein</p>
-                <p className="font-medium">{Math.round(totalMacros.protein)}g</p>
-              </div>
+                <p className="font-medium">{Math.round(totalMacros.protein)}g</p>              </div>
               <div>
                 <p className="text-muted-foreground">Carbs</p>
                 <p className="font-medium">{Math.round(totalMacros.carbs)}g</p>
@@ -484,7 +489,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealSaved, date, initialMea
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSaveMeal} disabled={isSaving || !canSave()}>
+          <Button onClick={handleSaveMeal} disabled={!canSave()}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? 'Save Changes' : 'Save Meal'}
           </Button>
