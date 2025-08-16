@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { format } from "date-fns";
+import { format, addDays, subDays, isToday } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { getMealsForDay } from "@/lib/firestore";
-import type { Meal, MealCategory } from "@/types";
+import type { Meal } from "@/types";
 import { MacroSummary } from "./macro-summary";
 import { AddMealDialog } from "./add-meal-dialog";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { MealList } from "./meal-list";
 
 export function DashboardClient() {
@@ -57,6 +57,14 @@ export function DashboardClient() {
     fetchMeals();
   }
 
+  const handlePreviousDay = () => {
+    setCurrentDate(prevDate => subDays(prevDate, 1));
+  };
+
+  const handleNextDay = () => {
+    setCurrentDate(prevDate => addDays(prevDate, 1));
+  };
+
   const dailyTotals = useMemo(() => {
     return meals.reduce(
       (acc, meal) => {
@@ -88,15 +96,25 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="flex items-center justify-between">
          <h2 className="text-2xl font-semibold tracking-tight">Daily Summary for {format(currentDate, "MMMM d, yyyy")}</h2>
+         <div className="flex items-center gap-2">
+           <Button variant="outline" size="icon" onClick={handlePreviousDay}>
+              <ChevronLeft className="h-4 w-4" />
+              <span className="sr-only">Previous Day</span>
+           </Button>
+           <Button variant="outline" size="icon" onClick={handleNextDay} disabled={isToday(currentDate)}>
+              <ChevronRight className="h-4 w-4" />
+               <span className="sr-only">Next Day</span>
+           </Button>
+         </div>
       </div>
 
       <MacroSummary dailyTotals={dailyTotals} goals={userProfile.goals} />
       
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Today's Meals</h3>
+          <h3 className="text-xl font-semibold">Meals for {format(currentDate, "MMMM d")}</h3>
            <Button onClick={handleOpenAddDialog}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Meal
