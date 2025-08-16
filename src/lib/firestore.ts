@@ -97,9 +97,7 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFil
     console.log('🔍 Firestore - Meal with ID created:', mealWithId);
     console.log('🔍 Firestore - Adding to Firestore collection...');
     
-    const docRef = await addDoc(collection(db, 'meals'), {
-      ...mealWithId,
-    });
+    const docRef = await addDoc(collection(db, 'meals'), mealWithId);
     
     console.log('✅ Firestore - Meal document created with ID:', docRef.id);
     return docRef.id;
@@ -157,7 +155,7 @@ export async function deleteMeal(mealId: string, userId: string): Promise<void> 
       where('userId', '==', userId)
     );
     
-    const querySnapshot = await getDocs(mealQuery);
+    const querySnapshot = await getDocs( mealQuery);
     if (!querySnapshot.empty) {
       const mealDoc = querySnapshot.docs[0];
       const mealData = mealDoc.data() as Meal;
@@ -256,3 +254,4 @@ export const getWeeklyTrends = async (userId: string) => {
     throw error;
   }
 };
+    
