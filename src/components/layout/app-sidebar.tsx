@@ -42,20 +42,6 @@ export function AppSidebar() {
             ))}
           </nav>
         </div>
-        <div className="mt-auto p-4">
-          <Card>
-            <CardHeader className="p-2 pt-0 md:p-4">
-              <CardTitle>Need Help?</CardTitle>
-            </CardHeader>
-            <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
-               <p className="text-xs text-muted-foreground mb-4">Contact our support team if you have any questions.</p>
-              <Button size="sm" className="w-full" variant="outline">
-                <LifeBuoy className="w-4 h-4 mr-2"/>
-                Support
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
