@@ -1,5 +1,5 @@
 
-import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, orderBy, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, orderBy, deleteDoc, updateDoc, Timestamp, writeBatch, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFirestoreInstance, getStorageInstance } from './firebase';
 import type { UserProfile, Goals, Meal, FoodItem } from '@/types';
@@ -65,31 +65,21 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 
 export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFile?: File): Promise<string> {
   try {
-    console.log('🔍 Firestore - Starting addMeal function...');
-    console.log('🔍 Firestore - Meal data received:', mealData);
-    console.log('🔍 Firestore - Image file:', imageFile);
-    
     const storage = getStorageInstance();
     const db = getFirestoreInstance();
-    
-    console.log('🔍 Firestore - Got storage and db instances');
     
     let photoUrl: string | undefined;
     
     if (imageFile) {
-      console.log('🔍 Firestore - Processing image file...');
       const storageRef = ref(storage, `meals/${mealData.userId}/${uuidv4()}`);
-      console.log('🔍 Firestore - Storage ref created:', storageRef);
       const snapshot = await uploadBytes(storageRef, imageFile);
-      console.log('🔍 Firestore - Image uploaded, getting download URL...');
       photoUrl = await getDownloadURL(snapshot.ref);
-      console.log('🔍 Firestore - Photo URL obtained:', photoUrl);
-    } else {
-      console.log('🔍 Firestore - No image file, skipping image processing');
-    }
+    } 
     
-    const mealWithId: Omit<Meal, 'id'> & { id?: string } = {
+    const docId = uuidv4();
+    const mealWithId: Meal = {
       ...mealData,
+      id: docId,
       createdAt: Date.now(),
       photoUrl,
     };
@@ -97,24 +87,12 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFil
     if (mealWithId.photoUrl === undefined) {
       delete mealWithId.photoUrl;
     }
-
-    mealWithId.id = uuidv4();
     
-    console.log('🔍 Firestore - Meal with ID created:', mealWithId);
-    console.log('🔍 Firestore - Adding to Firestore collection...');
+    await setDoc(doc(db, 'meals', docId), mealWithId);
     
-    const docRef = await addDoc(collection(db, 'meals'), mealWithId);
-    
-    console.log('✅ Firestore - Meal document created with ID:', docRef.id);
-    return docRef.id;
+    return docId;
   } catch (error) {
     console.error('❌ Firestore - Error adding meal:', error);
-    console.error('❌ Firestore - Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      code: (error as any).code,
-      name: error instanceof Error ? error.name : 'Unknown'
-    });
     throw error;
   }
 }
@@ -124,9 +102,6 @@ export async function getMealsForDay(userId: string, date: Date): Promise<Meal[]
     const db = getFirestoreInstance();
     const dateString = date.toISOString().split('T')[0];
     
-    console.log('📅 Firestore - Fetching meals for date:', dateString, 'user:', userId);
-    
-    // Restored optimized query with proper index
     const mealsQuery = query(
       collection(db, 'meals'),
       where('userId', '==', userId),
@@ -141,7 +116,6 @@ export async function getMealsForDay(userId: string, date: Date): Promise<Meal[]
       meals.push(doc.data() as Meal);
     });
     
-    console.log('✅ Firestore - Fetched meals:', meals.length);
     return meals;
   } catch (error) {
     console.error('❌ Firestore - Error getting meals for day:', error);
@@ -154,37 +128,36 @@ export async function deleteMeal(mealId: string, userId: string): Promise<void> 
     const db = getFirestoreInstance();
     const storage = getStorageInstance();
     
-    // Get the meal to check if it has a photo
-    const mealQuery = query(
-      collection(db, 'meals'),
-      where('id', '==', mealId),
-      where('userId', '==', userId)
-    );
+    const mealDocRef = doc(db, 'meals', mealId);
+    const mealDoc = await getDoc(mealDocRef);
+
+    if (!mealDoc.exists() || mealDoc.data().userId !== userId) {
+        throw new Error("Meal not found or permission denied.");
+    }
     
-    const querySnapshot = await getDocs( mealQuery);
-    if (!querySnapshot.empty) {
-      const mealDoc = querySnapshot.docs[0];
-      const mealData = mealDoc.data() as Meal;
+    const mealData = mealDoc.data() as Meal;
       
-      // Delete the photo from storage if it exists
-      if (mealData.photoUrl) {
-        try {
-          const photoRef = ref(storage, mealData.photoUrl);
-          await deleteObject(photoRef);
-        } catch (storageError) {
+    if (mealData.photoUrl) {
+      try {
+        const photoRef = ref(storage, mealData.photoUrl);
+        await deleteObject(photoRef);
+        console.log('Photo deleted from storage successfully.');
+      } catch (storageError: any) {
+        // If the file doesn't exist, we can ignore the error
+        if (storageError.code !== 'storage/object-not-found') {
           console.warn('Error deleting photo from storage:', storageError);
         }
       }
-      
-      // Delete the meal document
-      await deleteDoc(mealDoc.ref);
     }
+      
+    await deleteDoc(mealDocRef);
+    console.log('Meal document deleted from Firestore successfully.');
+
   } catch (error) {
     console.error('Error deleting meal:', error);
     throw error;
   }
 }
-
 
 export const updateUserGoals = async (userId: string, goals: Goals) => {
   try {
@@ -205,33 +178,26 @@ export const getWeeklyTrends = async (userId: string) => {
     weekAgo.setDate(today.getDate() - 7);
     weekAgo.setHours(0,0,0,0);
 
-    console.log('📊 Firestore - Fetching weekly trends for user:', userId);
-
-    // Restored optimized query with proper index
     const q = query(
       collection(db, 'meals'),
       where('userId', '==', userId),
-      where('createdAt', '>=', Timestamp.fromDate(weekAgo)),
+      where('createdAt', '>=', weekAgo.getTime()),
       orderBy('createdAt', 'asc')
     );
 
     const querySnapshot = await getDocs(q);
     const meals = querySnapshot.docs.map(doc => doc.data() as Meal);
     
-    console.log('📊 Firestore - Fetched meals for weekly trends:', meals.length);
-    
-    // Aggregate by day
     const dailyData: { [key: string]: { calories: number, protein: number, carbs: number, fat: number, fiber: number } } = {};
 
     for (let i = 0; i < 7; i++) {
-      const d = new Date(weekAgo);
-      d.setDate(weekAgo.getDate() + i);
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
       const dateString = d.toISOString().split('T')[0];
       dailyData[dateString] = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
     }
     
     meals.forEach(meal => {
-      // Handle both timestamp and number types for createdAt
       let mealDate: string;
       if (typeof meal.createdAt === 'number') {
         mealDate = new Date(meal.createdAt).toISOString().split('T')[0];
@@ -251,9 +217,8 @@ export const getWeeklyTrends = async (userId: string) => {
     const result = Object.entries(dailyData).map(([date, totals]) => ({
       date,
       ...totals
-    }));
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    console.log('✅ Firestore - Weekly trends calculated:', result.length, 'days');
     return result;
   } catch (error) {
     console.error('❌ Firestore - Error getting weekly trends:', error);

@@ -6,9 +6,10 @@ import { Skeleton } from "../ui/skeleton";
 interface MealListProps {
   meals: Meal[];
   isLoading: boolean;
+  onMealDeleted: (mealId: string) => void;
 }
 
-export function MealList({ meals, isLoading }: MealListProps) {
+export function MealList({ meals, isLoading, onMealDeleted }: MealListProps) {
   if (isLoading) {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -33,7 +34,7 @@ export function MealList({ meals, isLoading }: MealListProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {meals.map((meal) => (
-        <MealCard key={meal.id} meal={meal} />
+        <MealCard key={meal.id} meal={meal} onMealDeleted={onMealDeleted} />
       ))}
     </div>
   );

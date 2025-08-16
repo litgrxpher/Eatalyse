@@ -38,6 +38,10 @@ export function DashboardClient() {
     fetchMeals();
   }, [fetchMeals]);
 
+  const handleMealDeleted = (mealId: string) => {
+    setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
+  };
+
   const dailyTotals = useMemo(() => {
     return meals.reduce(
       (acc, meal) => {
@@ -52,24 +56,9 @@ export function DashboardClient() {
     );
   }, [meals]);
 
-  if (loading) {
+  if (loading || !user || !userProfile) {
     return (
       <div className="space-y-8">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-        </div>
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (!user || !userProfile) {
-    return (
-       <div className="space-y-8">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
@@ -99,7 +88,7 @@ export function DashboardClient() {
            </Button>
         </div>
         
-        <MealList meals={meals} isLoading={isLoading} />
+        <MealList meals={meals} isLoading={isLoading} onMealDeleted={handleMealDeleted} />
       </div>
       
       <AddMealDialog
@@ -113,4 +102,3 @@ export function DashboardClient() {
     </div>
   );
 }
-
