@@ -52,11 +52,15 @@ export function ProfileForm() {
       const profileUpdates = {
         displayName: values.displayName,
         height: Number(values.height) || null,
+        // We no longer save weight directly on the profile object
       };
       await updateUserProfile(user.uid, profileUpdates);
 
+      // If a weight was entered, add it to the history collection
       if (values.weight) {
         await addWeightEntry(user.uid, Number(values.weight));
+        // We also update the `weight` field on the user profile for easy access to the latest value.
+        await updateUserProfile(user.uid, { weight: Number(values.weight) });
       }
 
       toast({
@@ -64,6 +68,7 @@ export function ProfileForm() {
         description: "Your profile information has been saved.",
       });
     } catch (error) {
+      console.error("Error updating profile:", error);
       toast({
         variant: "destructive",
         title: "Update Failed",
