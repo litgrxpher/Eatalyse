@@ -67,18 +67,6 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-        
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="relative aspect-video max-w-5xl mx-auto">
-                <Image 
-                    src="https://placehold.co/1200x675.png" 
-                    alt="MacroMate Dashboard" 
-                    fill
-                    className="rounded-lg shadow-2xl object-cover"
-                    data-ai-hint="app screenshot dashboard"
-                />
-            </div>
-        </section>
 
       </main>
 
