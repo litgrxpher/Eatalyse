@@ -1,3 +1,4 @@
+
 import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, orderBy, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFirestoreInstance, getStorageInstance } from './firebase';
@@ -87,12 +88,17 @@ export async function addMeal(mealData: Omit<Meal, 'id' | 'createdAt'>, imageFil
       console.log('🔍 Firestore - No image file, skipping image processing');
     }
     
-    const mealWithId: Meal = {
+    const mealWithId: Omit<Meal, 'id'> & { id?: string } = {
       ...mealData,
-      id: uuidv4(),
       createdAt: Date.now(),
       photoUrl,
     };
+
+    if (mealWithId.photoUrl === undefined) {
+      delete mealWithId.photoUrl;
+    }
+
+    mealWithId.id = uuidv4();
     
     console.log('🔍 Firestore - Meal with ID created:', mealWithId);
     console.log('🔍 Firestore - Adding to Firestore collection...');

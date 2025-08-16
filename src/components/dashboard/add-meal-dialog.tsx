@@ -212,7 +212,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealD
         category: 'Snacks' as const, // Default category
         foodItems,
         totals,
-        photoUrl: imagePreview || ''
+        photoUrl: imagePreview || undefined
       };
 
       await addMeal(mealData, imageFile || undefined);
