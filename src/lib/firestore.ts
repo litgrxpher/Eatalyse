@@ -102,7 +102,10 @@ export async function updateMeal(mealId: string, updates: Partial<Meal>): Promis
   try {
     const db = getFirestoreInstance();
     const mealDocRef = doc(db, 'meals', mealId);
-    await updateDoc(mealDocRef, updates);
+    await updateDoc(mealDocRef, {
+      ...updates,
+      id: mealId
+    });
   } catch (error) {
     console.error('Error updating meal:', error);
     throw error;
