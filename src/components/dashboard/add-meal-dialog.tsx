@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useMemo, useEffect } from 'react';
@@ -18,7 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { identifyFoodFromImage } from '@/ai/flows/identify-food-from-image';
 import { lookupMacroInformation } from '@/ai/flows/lookup-macro-information';
 import { addMeal } from '@/lib/firestore';
-import type { FoodItem, LookupMacroInformationOutput, MealCategory } from '@/types';
+import type { FoodItem, LookupMacroInformationOutput } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, Loader2, X, Plus, Calculator, Image as ImageIcon } from 'lucide-react';
 
@@ -27,7 +28,6 @@ interface AddMealDialogProps {
   setIsOpen: (isOpen: boolean) => void;
   onMealAdded: () => void;
   date: string;
-  category: MealCategory;
 }
 
 type IdentifiedFood = {
@@ -47,18 +47,16 @@ type ManualFoodItem = {
   fiber: number;
 };
 
-export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }: AddMealDialogProps) {
+export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date }: AddMealDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
   
-  // AI Photo Analysis State
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [identifiedFoods, setIdentifiedFoods] = useState<IdentifiedFood[]>([]);
   const [isIdentifying, setIsIdentifying] = useState(false);
   
-  // Manual Entry State
   const [manualFoods, setManualFoods] = useState<ManualFoodItem[]>([]);
   const [newFoodName, setNewFoodName] = useState('');
   const [newServingSize, setNewServingSize] = useState('');
@@ -68,18 +66,10 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
   const [newFat, setNewFat] = useState('');
   const [newFiber, setNewFiber] = useState('');
   
-  // Common State
   const [mealName, setMealName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (category) {
-      setMealName(category);
-    }
-  }, [category]);
-
-  // AI Photo Analysis Functions
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -99,7 +89,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
     setIdentifiedFoods([]);
     try {
       const { foodItems } = await identifyFoodFromImage({ photoDataUri: dataUri });
-      setMealName(foodItems.length > 0 ? foodItems.join(', ') : category);
+      setMealName(foodItems.length > 0 ? foodItems.join(', ') : 'My Meal');
       const initialFoods = foodItems.map(name => ({ name, status: 'loading' } as IdentifiedFood));
       setIdentifiedFoods(initialFoods);
 
@@ -128,7 +118,6 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
     }
   };
 
-  // Manual Entry Functions
   const addManualFood = () => {
     if (!newFoodName || !newServingSize || !newCalories) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill in at least the food name, serving size, and calories.' });
@@ -148,7 +137,6 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
 
     setManualFoods([...manualFoods, newFood]);
     
-    // Clear form
     setNewFoodName('');
     setNewServingSize('');
     setNewCalories('');
@@ -180,21 +168,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
   };
 
   const handleSaveMeal = async () => {
-    console.log('🔍 Debug - Starting meal save process...');
-    console.log('🔍 Debug - User:', user);
-    console.log('🔍 Debug - Active tab:', activeTab);
-    console.log('🔍 Debug - Date:', date);
-    console.log('🔍 Debug - Category:', category);
-    
-    if (!user) {
-      console.error('❌ Debug - No user found, cannot save meal');
-      return;
-    }
+    if (!user) return;
     
     let foodItems: FoodItem[] = [];
     
     if (activeTab === 'ai') {
-      console.log('🔍 Debug - AI tab selected, identified foods:', identifiedFoods);
       foodItems = identifiedFoods
         .filter(f => f.status === 'loaded' && f.macros)
         .map(f => ({
@@ -204,7 +182,6 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
           ...f.macros!
         }));
     } else {
-      console.log('🔍 Debug - Manual tab selected, manual foods:', manualFoods);
       foodItems = manualFoods.map(food => ({
         id: food.id,
         name: food.name,
@@ -217,10 +194,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
       }));
     }
 
-    console.log('🔍 Debug - Processed food items:', foodItems);
-
     if (foodItems.length === 0) {
-      console.error('❌ Debug - No food items to save');
       toast({ variant: 'destructive', title: 'No Food Items', description: 'Please add at least one food item before saving.' });
       return;
     }
@@ -236,28 +210,21 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
         return acc;
       }, {calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0});
 
-      console.log('🔍 Debug - Calculated totals:', totals);
-
       const mealData = {
         userId: user.uid,
         date,
-        name: mealName || category,
-        category,
+        name: mealName || 'My Meal',
+        category: 'Snacks' as const, // Default category
         foodItems,
         totals,
         photoUrl: imagePreview || ''
       };
 
-      console.log('🔍 Debug - Meal data to save:', mealData);
-      console.log('🔍 Debug - Image file:', imageFile);
-
-      const mealId = await addMeal(mealData, imageFile || undefined);
+      await addMeal(mealData, imageFile || undefined);
       
-      console.log('✅ Debug - Meal saved successfully with ID:', mealId);
       toast({ title: 'Meal saved!', description: 'Your meal has been added to your log.' });
       handleClose();
     } catch(error) {
-      console.error('❌ Debug - Error saving meal:', error);
       toast({ variant: 'destructive', title: 'Error saving meal', description: `Something went wrong: ${error instanceof Error ? error.message : 'Unknown error'}`});
     } finally {
       setIsSaving(false);
@@ -265,19 +232,11 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
   };
   
   const totalMacros = useMemo(() => {
-    if (activeTab === 'ai') {
-      return identifiedFoods
-        .filter(f => f.status === 'loaded' && f.macros)
-        .reduce((acc, item) => {
-          acc.calories += item.macros!.calories;
-          acc.protein += item.macros!.protein;
-          acc.carbs += item.macros!.carbs;
-          acc.fat += item.macros!.fat;
-          acc.fiber += item.macros!.fiber;
-          return acc;
-        }, {calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0});
-    } else {
-      return manualFoods.reduce((acc, item) => {
+    const items = activeTab === 'ai' 
+      ? identifiedFoods.filter(f => f.status === 'loaded' && f.macros).map(f => f.macros!)
+      : manualFoods;
+      
+    return items.reduce((acc, item) => {
         acc.calories += item.calories;
         acc.protein += item.protein;
         acc.carbs += item.carbs;
@@ -285,7 +244,6 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
         acc.fiber += item.fiber;
         return acc;
       }, {calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0});
-    }
   }, [identifiedFoods, manualFoods, activeTab]);
 
   const canSave = () => {
@@ -300,9 +258,9 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
     <Dialog open={isOpen} onOpenChange={(open) => !open ? handleClose() : setIsOpen(true)}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Meal to {category}</DialogTitle>
+          <DialogTitle>Add Meal</DialogTitle>
           <DialogDescription>
-            Choose between AI-powered photo analysis or manual macro entry.
+            Use AI to analyze a photo or enter macros manually.
           </DialogDescription>
         </DialogHeader>
         
@@ -360,7 +318,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
                 <Input 
                   value={mealName} 
                   onChange={(e) => setMealName(e.target.value)} 
-                  placeholder="Meal Name (e.g., Lunch)" 
+                  placeholder="Meal Name" 
                 />
                 <div className="space-y-2">
                   {identifiedFoods.map((food, index) => (
@@ -382,7 +340,7 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
             <Input 
               value={mealName} 
               onChange={(e) => setMealName(e.target.value)} 
-              placeholder="Meal Name (e.g., Lunch)" 
+              placeholder="Meal Name" 
             />
             
             <div className="space-y-4">
@@ -494,7 +452,6 @@ export function AddMealDialog({ isOpen, setIsOpen, onMealAdded, date, category }
           </TabsContent>
         </Tabs>
 
-        {/* Macro Summary */}
         {(totalMacros.calories > 0) && (
           <div className="p-4 bg-muted rounded-lg">
             <h4 className="font-medium mb-2">Total Macros</h4>
