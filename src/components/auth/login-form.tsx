@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { getAuthInstance, isFirebaseConfigured } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -49,12 +49,29 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    if (!auth) return;
     try {
+      console.log('🔐 LoginForm - Starting login process');
+      const auth = getAuthInstance();
+      console.log('✅ LoginForm - Got auth instance:', !!auth);
+      
       const email = `${values.username.toLowerCase()}@macromate.com`;
-      await signInWithEmailAndPassword(auth, email, values.password);
+      console.log('📧 LoginForm - Attempting login with email:', email);
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email, values.password);
+      console.log('✅ LoginForm - Login successful for user:', userCredential.user.uid);
+      console.log('👤 LoginForm - User details:', {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        displayName: userCredential.user.displayName
+      });
+      
+      // Wait a moment for the auth state to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('🔄 LoginForm - Redirecting to dashboard');
       router.push('/dashboard');
     } catch (error: any) {
+      console.error('❌ LoginForm - Login error:', error);
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'Invalid username or password.';
@@ -63,7 +80,7 @@ export function LoginForm() {
       } else if (error.code === 'auth/configuration-not-found') {
         errorMessage = 'Authentication not configured. Please enable Email/Password and Google sign-in providers in the Firebase Console.';
       } else {
-        errorMessage = 'An error occurred during login. Please try again.';
+        errorMessage = `An error occurred during login: ${error.message}`;
       }
       toast({
         variant: 'destructive',
@@ -74,6 +91,27 @@ export function LoginForm() {
       setIsLoading(false);
     }
   }
+
+  // Test function to verify Firebase connection
+  const testFirebaseConnection = async () => {
+    try {
+      console.log('🧪 Testing Firebase connection...');
+      const auth = getAuthInstance();
+      console.log('✅ Firebase Auth instance:', !!auth);
+      console.log('✅ Firebase configured:', isFirebaseConfigured());
+      toast({
+        title: 'Firebase Test',
+        description: 'Firebase connection successful! Check console for details.',
+      });
+    } catch (error) {
+      console.error('❌ Firebase connection test failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Firebase Test Failed',
+        description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    }
+  };
 
   return (
     <Form {...form}>
@@ -107,6 +145,16 @@ export function LoginForm() {
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Login
+        </Button>
+        
+        {/* Test button */}
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="w-full" 
+          onClick={testFirebaseConnection}
+        >
+          🧪 Test Firebase Connection
         </Button>
       </form>
     </Form>

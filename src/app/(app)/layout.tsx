@@ -2,21 +2,51 @@
 
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { UserNav } from '@/components/layout/user-nav';
-import { useRequireAuth } from '@/hooks/use-auth';
+import { useRequireAuth, useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { loading } = useRequireAuth();
+  const { user, userProfile } = useAuth();
+
+  // Debug logging
+  console.log('🔐 AppLayout - Auth state:', { 
+    loading, 
+    user: user?.uid, 
+    userProfile: !!userProfile,
+    userEmail: user?.email 
+  });
 
   if (loading) {
+    console.log('⏳ AppLayout - Showing loading spinner');
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="ml-3 text-sm text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
+  if (!user) {
+    console.log('❌ AppLayout - No user, redirecting to login');
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-destructive">Authentication Required</h2>
+          <p className="text-muted-foreground mt-2">Please log in to access this page.</p>
+          <a 
+            href="/login" 
+            className="mt-4 inline-block bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+          >
+            Go to Login
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('✅ AppLayout - User authenticated, rendering app');
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <AppSidebar />

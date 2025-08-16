@@ -38,3 +38,11 @@ export interface Meal {
   photoUrl?: string;
   createdAt: number; // timestamp
 }
+
+export interface LookupMacroInformationOutput {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+}

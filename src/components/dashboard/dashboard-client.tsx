@@ -6,29 +6,39 @@ import { useAuth } from "@/hooks/use-auth";
 import { getMealsForDay } from "@/lib/firestore";
 import type { Meal, MealCategory } from "@/types";
 import { MacroSummary } from "./macro-summary";
-import { MealList } from "./meal-list";
 import { AddMealDialog } from "./add-meal-dialog";
 import { Skeleton } from "../ui/skeleton";
-import { Accordion } from "../ui/accordion";
 import { Button } from "../ui/button";
 import { PlusCircle } from "lucide-react";
 
 const mealCategories: MealCategory[] = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
 export function DashboardClient() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<MealCategory | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Debug logging
+  useEffect(() => {
+    console.log('DashboardClient - Auth state:', { user, userProfile, loading });
+  }, [user, userProfile, loading]);
+
   const fetchMeals = useCallback(async () => {
     if (user) {
+      console.log('Fetching meals for user:', user.uid);
       setIsLoading(true);
-      const fetchedMeals = await getMealsForDay(user.uid, currentDate);
-      setMeals(fetchedMeals);
-      setIsLoading(false);
+      try {
+        const fetchedMeals = await getMealsForDay(user.uid, currentDate);
+        console.log('Fetched meals:', fetchedMeals);
+        setMeals(fetchedMeals);
+      } catch (error) {
+        console.error('Error fetching meals:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   }, [user, currentDate]);
 
@@ -50,26 +60,47 @@ export function DashboardClient() {
     );
   }, [meals]);
 
-  const mealsByCategory = useMemo(() => {
-    const grouped: { [key in MealCategory]?: Meal[] } = {};
-    meals.forEach((meal) => {
-      if (!grouped[meal.category]) {
-        grouped[meal.category] = [];
-      }
-      grouped[meal.category]!.push(meal);
-    });
-    return grouped;
-  }, [meals]);
-  
   const handleAddMealClick = (category: MealCategory) => {
     setSelectedCategory(category);
     setIsDialogOpen(true);
   };
 
+  // Show loading state while auth is loading
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
+  // Show error state if no user
+  if (!user) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-destructive">Authentication Error</h2>
+          <p className="text-muted-foreground">Please log in to access the dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state if no user profile
   if (!userProfile) {
     return (
       <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold">Loading Profile...</h2>
+          <p className="text-muted-foreground">Please wait while we load your profile.</p>
+        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
@@ -90,19 +121,53 @@ export function DashboardClient() {
 
       <MacroSummary dailyTotals={dailyTotals} goals={userProfile.goals} />
       
-      <div className="space-y-4">
-        {mealCategories.map(category => (
-          <div key={category}>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-semibold tracking-tight">{category}</h3>
-              <Button variant="ghost" size="sm" onClick={() => handleAddMealClick(category)}>
-                <PlusCircle className="mr-2 h-4 w-4"/>
-                Add Meal
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-4">Add Your Meals</h3>
+          <p className="text-muted-foreground mb-6">
+            Start tracking your nutrition by adding your first meal of the day.
+          </p>
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {mealCategories.map(category => (
+            <div key={category} className="text-center">
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="w-full h-24 flex flex-col items-center justify-center gap-2"
+                onClick={() => handleAddMealClick(category)}
+              >
+                <PlusCircle className="h-8 w-8"/>
+                <span className="font-medium">{category}</span>
               </Button>
             </div>
-            <MealList meals={mealsByCategory[category] || []} isLoading={isLoading} />
+          ))}
+        </div>
+        
+        {meals.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold mb-4">Today's Meals</h3>
+            <div className="space-y-3">
+              {meals.map((meal) => (
+                <div key={meal.id} className="p-4 border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium">{meal.name}</h4>
+                      <p className="text-sm text-muted-foreground">{meal.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{meal.totals.calories} kcal</p>
+                      <p className="text-sm text-muted-foreground">
+                        P: {meal.totals.protein}g | C: {meal.totals.carbs}g | F: {meal.totals.fat}g
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        )}
       </div>
       
       {selectedCategory && (

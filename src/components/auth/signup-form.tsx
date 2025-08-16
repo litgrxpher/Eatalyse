@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { getAuthInstance, isFirebaseConfigured } from '@/lib/firebase';
 import { createUserProfile } from '@/lib/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -49,13 +49,21 @@ export function SignupForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    if (!auth) return;
     try {
+      const auth = getAuthInstance();
       const email = `${values.username.toLowerCase()}@macromate.com`;
+      console.log('Creating user with email:', email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, values.password);
-      await createUserProfile(userCredential.user, values.username, email);
+      console.log('User created, creating profile for:', userCredential.user.uid);
+      await createUserProfile(userCredential.user.uid, {
+        email: email,
+        displayName: values.username,
+        photoURL: null
+      });
+      console.log('Profile created, redirecting to dashboard');
       router.push('/dashboard');
     } catch (error: any) {
+      console.error('Signup error:', error);
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This username is already taken. Please choose another one.';

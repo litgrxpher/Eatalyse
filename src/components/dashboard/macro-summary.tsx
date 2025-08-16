@@ -16,7 +16,6 @@ const macroDetails = [
   { key: 'fiber', label: 'Fiber', icon: Leaf, color: 'hsl(var(--fiber))' },
 ] as const;
 
-
 export function MacroSummary({ dailyTotals, goals }: MacroSummaryProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -37,7 +36,11 @@ export function MacroSummary({ dailyTotals, goals }: MacroSummaryProps) {
               <p className="text-xs text-muted-foreground">
                 of {goal}{unit} goal
               </p>
-              <Progress value={progress} className="mt-4 h-2" indicatorcolor={color} />
+              <Progress 
+                value={progress} 
+                className="mt-4 h-2" 
+                indicatorColor={color}
+              />
             </CardContent>
           </Card>
         );
@@ -45,24 +48,3 @@ export function MacroSummary({ dailyTotals, goals }: MacroSummaryProps) {
     </div>
   );
 }
-
-// Need to update Progress component to accept indicator color
-// In src/components/ui/progress.tsx
-// Add indicatorColor prop and apply it as inline style
-declare module "react" {
-  interface CSSProperties {
-    [key: `--${string}`]: string | number;
-  }
-}
-
-const OriginalProgress = Progress;
-const CustomProgress = ({ indicatorcolor, ...props }: React.ComponentProps<typeof Progress> & { indicatorcolor?: string }) => {
-  return (
-    <OriginalProgress
-      {...props}
-      style={{'--indicator-color': indicatorcolor} as React.CSSProperties}
-      className="[&>div]:bg-[--indicator-color]"
-    />
-  );
-};
-export { CustomProgress as Progress };
