@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -79,8 +80,8 @@ export function GoalsForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-8 max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8">
             <FormField
             control={form.control}
             name="calories"
@@ -88,7 +89,7 @@ export function GoalsForm() {
                 <FormItem>
                 <FormLabel>Calories (kcal)</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="2000" {...field} />
+                    <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -101,7 +102,7 @@ export function GoalsForm() {
                 <FormItem>
                 <FormLabel>Protein (g)</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="150" {...field} />
+                    <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -114,7 +115,7 @@ export function GoalsForm() {
                 <FormItem>
                 <FormLabel>Carbohydrates (g)</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="200" {...field} />
+                    <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -127,7 +128,7 @@ export function GoalsForm() {
                 <FormItem>
                 <FormLabel>Fat (g)</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="60" {...field} />
+                    <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -140,7 +141,7 @@ export function GoalsForm() {
                 <FormItem>
                 <FormLabel>Fiber (g)</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="30" {...field} />
+                    <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
