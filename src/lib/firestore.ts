@@ -1,5 +1,6 @@
 
-import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, orderBy, deleteDoc, updateDoc, Timestamp, writeBatch, limit } from 'firebase/firestore';
+
+import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, orderBy, deleteDoc, updateDoc, Timestamp, writeBatch, limit, runTransaction } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getFirestoreInstance, getStorageInstance } from './firebase';
 import type { UserProfile, Goals, Meal, FoodItem, WeightEntry } from '@/types';
@@ -130,19 +131,26 @@ export async function getMealsForDay(userId: string, date: Date): Promise<Meal[]
 }
 
 export async function deleteMeal(mealId: string, userId: string): Promise<void> {
+  const db = getFirestoreInstance();
+  const mealDocRef = doc(db, "meals", mealId);
+
   try {
-    const db = getFirestoreInstance();
-    const mealDocRef = doc(db, 'meals', mealId);
-    const mealDoc = await getDoc(mealDocRef);
+    await runTransaction(db, async (transaction) => {
+      const mealDoc = await transaction.get(mealDocRef);
+      if (!mealDoc.exists()) {
+        throw new Error("Document does not exist!");
+      }
 
-    if (!mealDoc.exists() || mealDoc.data().userId !== userId) {
-        throw new Error("Meal not found or permission denied.");
-    }
-
-    await deleteDoc(mealDocRef);
-
+      const mealData = mealDoc.data();
+      if (mealData.userId !== userId) {
+        throw new Error("Permission denied: You can only delete your own meals.");
+      }
+      
+      transaction.delete(mealDocRef);
+    });
+    console.log("Transaction successfully committed!");
   } catch (error) {
-    console.error('Error deleting meal:', error);
+    console.error("Transaction failed: ", error);
     throw error;
   }
 }
